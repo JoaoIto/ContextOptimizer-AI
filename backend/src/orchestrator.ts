@@ -4,32 +4,26 @@ import { runPlanner } from "./agents/planner";
 import { runExecutor } from "./agents/executor";
 import { runSandboxValidation } from "./core/sandbox";
 
-/**
- * Pipeline de orquestração sequencial que emite o estado a cada transição (Generator Function).
- * Essa abordagem nativa do TS permite uma integração assíncrona extremamente limpa com o SSE.
- */
-export async function* runPipeline(initialState: AgentState): AsyncGenerator<AgentState, void, unknown> {
-    // Parsing rigoroso da estrutura via Zod
+// Fase 1 e 2: Pesquisa e Planejamento
+export async function* runPlanningPipeline(initialState: AgentState): AsyncGenerator<AgentState, void, unknown> {
     let currentState = AgentStateSchema.parse(initialState);
-    
-    // Transição 0: Estado base aceito
     yield currentState;
 
-    // --- FASE 1: PESQUISA E COMPRESSÃO ---
     currentState = await runResearcher(currentState);
     currentState = AgentStateSchema.parse(currentState); 
     yield currentState;
     
     if (currentState.executionStatus.includes("FAILED")) return;
 
-    // --- FASE 2: PLANEJAMENTO ARQUITETURAL (PTCF) ---
     currentState = await runPlanner(currentState);
     currentState = AgentStateSchema.parse(currentState); 
     yield currentState;
+}
 
-    if (currentState.executionStatus.includes("FAILED")) return;
-
-    // --- FASE 3 e 4: GERAÇÃO DE CÓDIGO E LOOP DE VALIDAÇÃO (SANDBOX) ---
+// Fase 3 e 4: Execução e Sandbox
+export async function* runExecutionPipeline(state: AgentState): AsyncGenerator<AgentState, void, unknown> {
+    let currentState = AgentStateSchema.parse(state);
+    
     let retries = 3;
     let success = false;
 
@@ -40,7 +34,6 @@ export async function* runPipeline(initialState: AgentState): AsyncGenerator<Age
         
         if (currentState.executionStatus.includes("FAILED")) break;
 
-        // Se houver código gerado, envia para a Sandbox
         if (currentState.generatedCode) {
             const sandboxResult = await runSandboxValidation(currentState.generatedCode);
             
