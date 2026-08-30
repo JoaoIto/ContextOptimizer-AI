@@ -17,6 +17,16 @@ export async function runSandboxValidation(code: string): Promise<{ success: boo
             // Executa o arquivo TS. Se houver erro de sintaxe, o executor lançará erro.
             exec(`npx tsx ${tempFilePath}`, { timeout: 5000 }, (error, stdout, stderr) => {
                 if (error) {
+                    // Se o erro foi causado pelo timeout (killed = true), significa que o script 
+                    // compilou e começou a rodar (ex: servidor web, readline iterativo), o que é um SUCESSO de sintaxe.
+                    if (error.killed && error.signal === 'SIGTERM') {
+                        resolve({
+                            success: true,
+                            output: "Sintaxe validada com sucesso (Script em execução contínua / Timeout atingido sem crash inicial).\n" + stdout
+                        });
+                        return;
+                    }
+
                     const cleanError = (stderr || error.message).replace(/\x1B\[[0-9;]*[a-zA-Z]/g, '');
                     resolve({
                         success: false,

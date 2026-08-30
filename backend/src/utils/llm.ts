@@ -30,6 +30,9 @@ export async function generateStream(
                 console.log(`[🔄] Retry ${attempt}/${maxRetries} via modelo: ${targetModel}...`);
             }
             
+            // Throttling / P-Queue simplificado (Delay garantido de 2s antes de qualquerr requisição nova para respeitar RPM rate limit)
+            await delay(2000);
+
             return await ai.models.generateContentStream({
                 model: targetModel,
                 contents: userPrompt,
@@ -42,9 +45,10 @@ export async function generateStream(
             const isTimeoutOrRateLimit = error.message?.includes('503') || error.message?.includes('429') || error.message?.includes('Timeout');
             
             if (attempt < maxRetries && (isTimeoutOrRateLimit || attempt === 0)) {
+                const backoffTimes = [4000, 8000, 15000];
+                const waitTime = backoffTimes[attempt] || 15000;
                 attempt++;
-                const waitTime = attempt * 2000;
-                const msg = `Servidores congestionados ou limite atingido (${error.message || 'Erro Desconhecido'}). Tentativa ${attempt}/${maxRetries} em ${waitTime/1000}s...`;
+                const msg = `Atraso na API detectado. Aplicando retentativa de segurança... (Tentativa ${attempt}/${maxRetries})`;
                 console.log(`[⚠️] ${msg}`);
                 
                 if (onRetry) {

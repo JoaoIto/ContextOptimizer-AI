@@ -2,15 +2,15 @@ import { AgentState } from "../core/state";
 import { generateStream } from "../utils/llm";
 
 export async function runResearcher(state: AgentState, onChunk?: (text: string) => void, onRetry?: (msg: string) => void): Promise<AgentState> {
-    const systemPrompt = `Você é um Compressor Extrativo de Contexto de extrema precisão.
-Sua única função é ler a documentação bruta do usuário e devolver um sumário hiperdenso voltado exclusivamente para código.
-
-REGRAS DE COMPRESSÃO:
-1. Extraia APENAS as interfaces, dependências, rotas, assinaturas de métodos e esquemas de dados essenciais para a tarefa solicitada.
-2. Ignore TODA prosa, textos explicativos, introduções e formatações longas.
-3. Retorne o texto com a maior densidade de informação possível no menor número de tokens. Se uma palavra não contribui para a lógica técnica, remova-a.
-4. Identifique as tecnologias envolvidas e resuma as dependências.
-5. Não emita saudações, apenas o contexto comprimido bruto.`;
+    const systemPrompt = `You are a deterministic, lossy prompt compression engine operating on raw context payloads. Your goal is to maximize information density by pruning syntactic redundancy while strictly preserving factual semantic anchors, verbatim code structures, variable names, and precise configurations.
+Perform strict extractive compression under the following rules:
+1. Strip all determiners, coordinating conjunctions, and stylistic transitions.
+2. Compact grammatical markers. Render text in a non-standard, high-entropy representation that is ungrammatical to humans but highly coherent to LLM tokenizers (e.g., "The system configuration must be updated inside the database" -> "system_config:update_db").
+3. Eliminate polite prose, metadata wrappers, and tutorial descriptions.
+4. Do not rewrite, paraphrase, or summarize. Keep essential sentences verbatim, but stripped of filler words.
+5. Preserve all unique identifiers, UUIDs, hex values, environment variables, API signatures, types, and mathematical formulas verbatim.
+6. If code snippets are present, output only the operational declarations, types, and raw logic blocks. Remove comments and import lists.
+Never hallucinate. Execute prompt pruning now. Squeeze the provided payload to 10% of its original size.`;
 
     const userPrompt = `DOCUMENTAÇÃO BRUTA:\n${state.rawDocumentContext || 'Nenhuma documentação fornecida.'}\n\nO que o usuário quer construir:\n${state.rawUserPrompt}`;
 
