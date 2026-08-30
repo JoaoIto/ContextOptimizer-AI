@@ -1,9 +1,21 @@
 import { useState, useCallback } from 'react';
 
 export interface Metrics {
-  tokensSaved: number;
-  totalCost: number;
-  wallClockLatencyMs: number;
+  tokensSaved?: number;
+  totalCost?: number;
+  wallClockLatencyMs?: number;
+  originalTokens?: number;
+  optimizedTokens?: number;
+  compressionRatio?: string;
+  estimatedSavings?: string;
+  agentBreakdown?: {
+    researcher: number;
+    planner: number;
+    executor: number;
+  };
+  monolithicAccuracy?: string;
+  tdpAccuracy?: string;
+  hallucinationDrop?: string;
 }
 
 export type ExecutionStatus = 

@@ -1,9 +1,21 @@
 import { z } from "zod";
 
 export const MetricsSchema = z.object({
-  tokensSaved: z.number(),
-  totalCost: z.number(),
-  wallClockLatencyMs: z.number(),
+  tokensSaved: z.number().optional(),
+  totalCost: z.number().optional(),
+  wallClockLatencyMs: z.number().optional(),
+  originalTokens: z.number().optional(),
+  optimizedTokens: z.number().optional(),
+  compressionRatio: z.string().optional(),
+  estimatedSavings: z.string().optional(),
+  agentBreakdown: z.object({
+    researcher: z.number(),
+    planner: z.number(),
+    executor: z.number(),
+  }).optional(),
+  monolithicAccuracy: z.string().optional(),
+  tdpAccuracy: z.string().optional(),
+  hallucinationDrop: z.string().optional(),
 });
 
 export const ExecutionStatusSchema = z.enum([

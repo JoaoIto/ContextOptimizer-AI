@@ -89,54 +89,58 @@ export async function* generateUniversalStream(
             }
         }
     } else if (agentType === 'EXECUTOR') {
-        let useFallback = false;
-        try {
-            const stream = await ai.models.generateContentStream({
-                model: 'gemini-2.5-flash',
-                contents: userPrompt,
-                config: {
-                    systemInstruction: systemInstruction,
-                    temperature: 0.1,
-                }
-            });
-            for await (const chunk of stream) {
-                if (chunk.text) yield { text: chunk.text };
-            }
-            return;
-        } catch (error: any) {
-            const isQuotaError = error.message?.includes('429') || error.message?.includes('Quota') || error.message?.includes('quota');
-            
-            if (isQuotaError && attempt < maxRetries) {
-                console.warn(`[🔥] LLM Generation Quota Exceeded for ${provider}. Triggering Fallback immediately to Qwen via universalClient.`, JSON.stringify(error));
-                
-                try {
-                    const stream = await universalClient.chat.completions.create({
-                        model: 'meta-llama/llama-3.3-70b-instruct',
-                        messages: [
-                            { role: 'system', content: systemInstruction },
-                            { role: 'user', content: userPrompt }
-                        ],
-                        stream: true,
-                        temperature: 0.1
-                    }, { signal: abortSignal });
-                    for await (const chunk of stream) {
-                        const content = chunk.choices[0]?.delta?.content || '';
-                        if (content) yield { text: content };
+        let attempt = 0;
+        let provider = 'Gemini';
+        while (attempt <= maxRetries) {
+            try {
+                const stream = await ai.models.generateContentStream({
+                    model: 'gemini-2.5-flash',
+                    contents: userPrompt,
+                    config: {
+                        systemInstruction: systemInstruction,
+                        temperature: 0.1,
                     }
-                    return; 
-                } catch (fallbackError: any) {
-                    console.error("[CRITICAL] Fallback also failed.", fallbackError);
-                    if (onRetry) onRetry(`Fallback failed: ${fallbackError.message}`);
-                    throw new Error(`QUOTA_EXCEEDED_AND_FALLBACK_FAILED: ${fallbackError.message}`);
+                });
+                for await (const chunk of stream) {
+                    if (chunk.text) yield { text: chunk.text };
                 }
-            }
+                return;
+            } catch (error: any) {
+                const isQuotaError = error.message?.includes('429') || error.message?.includes('Quota') || error.message?.includes('quota') || error.message?.includes('RESOURCE_EXHAUSTED');
+                
+                if (isQuotaError) {
+                    console.warn(`[🔥] LLM Generation Quota Exceeded for ${provider}. Triggering Fallback immediately to Llama 3.3 via universalClient.`, error.message);
+                    
+                    try {
+                        const stream = await universalClient.chat.completions.create({
+                            model: 'meta-llama/llama-3.3-70b-instruct',
+                            messages: [
+                                { role: 'system', content: systemInstruction },
+                                { role: 'user', content: userPrompt }
+                            ],
+                            stream: true,
+                            temperature: 0.1
+                        }, { signal: abortSignal });
+                        for await (const chunk of stream) {
+                            const content = chunk.choices[0]?.delta?.content || '';
+                            if (content) yield { text: content };
+                        }
+                        return; 
+                    } catch (fallbackError: any) {
+                        console.error("[CRITICAL] Fallback also failed.", fallbackError);
+                        if (onRetry) onRetry(`Fallback failed: ${fallbackError.message}`);
+                        throw new Error(`QUOTA_EXCEEDED_AND_FALLBACK_FAILED: ${fallbackError.message}`);
+                    }
+                }
 
-            console.error(`Error generating stream with ${provider}:`, error);
-            if (attempt < maxRetries) {
-                if (onRetry) onRetry(`Error on attempt ${attempt}. Retrying... (${error.message})`);
-                await delay(2000 * attempt);
-            } else {
-                throw error;
+                console.error(`Error generating stream with ${provider}:`, error);
+                if (attempt < maxRetries) {
+                    attempt++;
+                    if (onRetry) onRetry(`Error on attempt ${attempt}. Retrying... (${error.message})`);
+                    await delay(2000 * attempt);
+                } else {
+                    throw error;
+                }
             }
         }
     } else {
