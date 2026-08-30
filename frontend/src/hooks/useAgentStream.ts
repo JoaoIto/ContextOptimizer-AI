@@ -130,8 +130,10 @@ export function useAgentStream() {
         const { id } = await res.json();
         startEventStream(`${apiUrl}/api/stream/execute/${id}`);
     } catch (err: any) {
-        setError(err.message);
-        setIsProcessing(false);
+        if (err.name !== 'AbortError') {
+            setError('Conexão perdida. Tentando restabelecer link seguro...');
+            setIsProcessing(false);
+        }
     }
   }, []);
 

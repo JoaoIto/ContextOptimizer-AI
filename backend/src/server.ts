@@ -3,6 +3,7 @@ import cors from 'cors';
 import { runPlanningPipeline, runExecutionPipeline } from './orchestrator';
 import { AgentState } from './core/state';
 import crypto from 'crypto';
+import { UserInputSchema } from './validators';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -19,14 +20,15 @@ app.get('/api/health', (req: Request, res: Response) => {
 
 // Rota 1: Iniciar Planejamento (Pesquisador + Planejador)
 app.get('/api/stream/plan', async (req: Request, res: Response) => {
-  const prompt = req.query.prompt as string;
-  const document = req.query.document as string;
+  const parsed = UserInputSchema.safeParse({
+      documentContext: (req.query.document as string) || '',
+      userQuery: req.query.prompt as string
+  });
 
-  if (!prompt) {
-    res.status(400).json({ error: 'O parâmetro prompt é obrigatório.' });
-    return;
+  if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.errors[0].message });
+      return;
   }
-  const safeDocument = document || '';
 
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
@@ -34,20 +36,30 @@ app.get('/api/stream/plan', async (req: Request, res: Response) => {
     'Connection': 'keep-alive',
   });
 
+  const abortController = new AbortController();
+  req.on('close', () => {
+      console.log('[SSE] Cliente desconectou. Abortando IA...');
+      abortController.abort();
+      res.end();
+  });
+
   const initialState: AgentState = {
-    rawUserPrompt: prompt,
-    rawDocumentContext: safeDocument,
+    rawUserPrompt: parsed.data.userQuery,
+    rawDocumentContext: parsed.data.documentContext || '',
     executionStatus: "INITIALIZED",
     sandboxCompilationPassed: false,
     metrics: { tokensSaved: 0, totalCost: 0, wallClockLatencyMs: 0 }
   };
 
   try {
-    for await (const state of runPlanningPipeline(initialState)) {
+    for await (const state of runPlanningPipeline(initialState, abortController.signal)) {
+      if (abortController.signal.aborted) break;
       res.write(`data: ${JSON.stringify(state)}\n\n`);
     }
   } catch (error) {
-    res.write(`data: ${JSON.stringify({ error: String(error) })}\n\n`);
+    if (!abortController.signal.aborted) {
+        res.write(`data: ${JSON.stringify({ error: String(error) })}\n\n`);
+    }
   } finally {
     res.end();
   }
@@ -83,12 +95,22 @@ app.get('/api/stream/execute/:id', async (req: Request, res: Response) => {
         'Connection': 'keep-alive',
     });
 
+    const abortController = new AbortController();
+    req.on('close', () => {
+        console.log('[SSE] Cliente desconectou. Abortando Execução...');
+        abortController.abort();
+        res.end();
+    });
+
     try {
-        for await (const newState of runExecutionPipeline(state)) {
+        for await (const newState of runExecutionPipeline(state, abortController.signal)) {
+            if (abortController.signal.aborted) break;
             res.write(`data: ${JSON.stringify(newState)}\n\n`);
         }
     } catch (error) {
-        res.write(`data: ${JSON.stringify({ error: String(error) })}\n\n`);
+        if (!abortController.signal.aborted) {
+            res.write(`data: ${JSON.stringify({ error: String(error) })}\n\n`);
+        }
     } finally {
         res.end();
     }

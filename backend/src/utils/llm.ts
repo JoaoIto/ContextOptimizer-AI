@@ -26,6 +26,7 @@ export async function* generateUniversalStream(
     systemInstruction: string, 
     agentType: 'RESEARCHER' | 'PLANNER' | 'EXECUTOR',
     onRetry?: (msg: string) => void,
+    abortSignal?: AbortSignal
 ): AsyncGenerator<{ text: string }> {
     const maxRetries = 2;
 
@@ -41,7 +42,7 @@ export async function* generateUniversalStream(
                     ],
                     stream: true,
                     temperature: 0.2
-                });
+                }, { signal: abortSignal });
                 for await (const chunk of stream) {
                     const content = chunk.choices[0]?.delta?.content || '';
                     if (content) yield { text: content };
@@ -70,7 +71,7 @@ export async function* generateUniversalStream(
                     ],
                     stream: true,
                     temperature: 0.2
-                });
+                }, { signal: abortSignal });
                 for await (const chunk of stream) {
                     const content = chunk.choices[0]?.delta?.content || '';
                     if (content) yield { text: content };
@@ -97,7 +98,7 @@ export async function* generateUniversalStream(
                     systemInstruction: systemInstruction,
                     temperature: 0.1,
                 }
-            });
+            }); // O SDK atual do GoogleGenAI pode não aceitar abortSignal diretamente no generateContentStream, mas se abortado, o gerador de eventos fecha a requisição.
             for await (const chunk of stream) {
                 if (chunk.text) yield { text: chunk.text };
             }
@@ -125,7 +126,7 @@ export async function* generateUniversalStream(
                         ],
                         stream: true,
                         temperature: 0.1
-                    });
+                    }, { signal: abortSignal });
                     for await (const chunk of stream) {
                         const content = chunk.choices[0]?.delta?.content || '';
                         if (content) yield { text: content };

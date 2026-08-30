@@ -1,7 +1,12 @@
 import { AgentState } from "../core/state";
 import { generateUniversalStream } from "../utils/llm";
 
-export async function runResearcher(state: AgentState, onChunk?: (text: string) => void, onRetry?: (msg: string) => void): Promise<AgentState> {
+export async function runResearcher(
+    state: AgentState, 
+    onChunk?: (text: string) => void, 
+    onRetry?: (msg: string) => void,
+    abortSignal?: AbortSignal
+): Promise<AgentState> {
     const systemPrompt = `You are a deterministic, lossy prompt compression engine operating on raw context payloads. Your goal is to maximize information density by pruning syntactic redundancy while strictly preserving factual semantic anchors, verbatim code structures, variable names, and precise configurations.
 Perform strict extractive compression under the following rules:
 1. Strip all determiners, coordinating conjunctions, and stylistic transitions.
@@ -15,7 +20,7 @@ Never hallucinate. Execute prompt pruning now. Squeeze the provided payload to 1
     const userPrompt = `DOCUMENTAÇÃO BRUTA:\n${state.rawDocumentContext || 'Nenhuma documentação fornecida.'}\n\nO que o usuário quer construir:\n${state.rawUserPrompt}`;
 
     try {
-        const stream = await generateUniversalStream(userPrompt, systemPrompt, 'RESEARCHER', onRetry);
+        const stream = await generateUniversalStream(userPrompt, systemPrompt, 'RESEARCHER', onRetry, abortSignal);
         let rawOutput = '';
         
         for await (const chunk of stream) {

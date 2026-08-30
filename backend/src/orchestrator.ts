@@ -6,10 +6,11 @@ import { runSandboxValidation } from "./core/sandbox";
 
 // Helper robusto para rodar agente e fazer yield
 async function* streamAgent(
-    agentFn: (state: AgentState, onChunk: (c: string) => void, onRetry?: (msg: string) => void) => Promise<AgentState>,
+    agentFn: (state: AgentState, onChunk: (c: string) => void, onRetry?: (msg: string) => void, abortSignal?: AbortSignal) => Promise<AgentState>,
     state: AgentState,
     streamingStatus: string,
-    chunkKey: 'streamingResearchChunk' | 'streamingPlanChunk' | 'streamingCodeChunk'
+    chunkKey: 'streamingResearchChunk' | 'streamingPlanChunk' | 'streamingCodeChunk',
+    abortSignal?: AbortSignal
 ): AsyncGenerator<AgentState, AgentState, unknown> {
     const queue: AgentState[] = [];
     let isDone = false;
@@ -27,7 +28,7 @@ async function* streamAgent(
             executionStatus: "RETRYING_API",
             errorFeedbackLog: msg
         });
-    }).then(res => {
+    }, abortSignal).then(res => {
         finalState = res;
         isDone = true;
     }).catch(err => {
@@ -52,11 +53,11 @@ async function* streamAgent(
 }
 
 // Fase 1 e 2: Pesquisa e Planejamento
-export async function* runPlanningPipeline(initialState: AgentState): AsyncGenerator<AgentState, void, unknown> {
+export async function* runPlanningPipeline(initialState: AgentState, abortSignal?: AbortSignal): AsyncGenerator<AgentState, void, unknown> {
     let currentState = AgentStateSchema.parse(initialState);
     yield currentState;
 
-    const researchGen = streamAgent(runResearcher, currentState, "RESEARCH_STREAMING", "streamingResearchChunk");
+    const researchGen = streamAgent(runResearcher, currentState, "RESEARCH_STREAMING", "streamingResearchChunk", abortSignal);
     while (true) {
         const next = await researchGen.next();
         if (next.done) { currentState = next.value; break; }
@@ -71,7 +72,7 @@ export async function* runPlanningPipeline(initialState: AgentState): AsyncGener
 
     currentState.rawDocumentContext = "";
 
-    const plannerGen = streamAgent(runPlanner, currentState, "PLANNING_STREAMING", "streamingPlanChunk");
+    const plannerGen = streamAgent(runPlanner, currentState, "PLANNING_STREAMING", "streamingPlanChunk", abortSignal);
     while (true) {
         const next = await plannerGen.next();
         if (next.done) { currentState = next.value; break; }
@@ -84,7 +85,7 @@ export async function* runPlanningPipeline(initialState: AgentState): AsyncGener
 }
 
 // Fase 3 e 4: Execução e Sandbox
-export async function* runExecutionPipeline(state: AgentState): AsyncGenerator<AgentState, void, unknown> {
+export async function* runExecutionPipeline(state: AgentState, abortSignal?: AbortSignal): AsyncGenerator<AgentState, void, unknown> {
     let currentState = AgentStateSchema.parse(state);
     
     currentState.rawDocumentContext = "";
@@ -95,7 +96,7 @@ export async function* runExecutionPipeline(state: AgentState): AsyncGenerator<A
     let success = false;
 
     while (retries > 0 && !success) {
-        const executorGen = streamAgent(runExecutor, currentState, "CODE_STREAMING", "streamingCodeChunk");
+        const executorGen = streamAgent(runExecutor, currentState, "CODE_STREAMING", "streamingCodeChunk", abortSignal);
         while (true) {
             const next = await executorGen.next();
             if (next.done) { currentState = next.value; break; }

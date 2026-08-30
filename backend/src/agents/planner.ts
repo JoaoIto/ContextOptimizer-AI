@@ -1,7 +1,12 @@
 import { AgentState } from "../core/state";
 import { generateUniversalStream } from "../utils/llm";
 
-export async function runPlanner(state: AgentState, onChunk?: (text: string) => void, onRetry?: (msg: string) => void): Promise<AgentState> {
+export async function runPlanner(
+    state: AgentState, 
+    onChunk?: (text: string) => void, 
+    onRetry?: (msg: string) => void,
+    abortSignal?: AbortSignal
+): Promise<AgentState> {
     const systemPrompt = `Você atua no framework PTCF (Persona, Task, Context, Format). 
 REGRAS ABSOLUTAS E INEGOCIÁVEIS:
 1. O código arquitetado DEVE ser projetado estritamente para TypeScript (Node.js). Não proponha bibliotecas de Python, Go ou outras linguagens. O ambiente alvo é estritamente TypeScript.
@@ -26,7 +31,7 @@ Olá! Analisei seu pedido para construir um **Orquestrador de Projetos**. O cont
     const userPrompt = `OBJETIVO DO DESENVOLVEDOR:\n${state.rawUserPrompt}\n\nCONTEXTO COMPRIMIDO (REGRAS):\n${state.compressedContext}`;
 
     try {
-        const stream = await generateUniversalStream(userPrompt, systemPrompt, 'PLANNER', onRetry);
+        const stream = await generateUniversalStream(userPrompt, systemPrompt, 'PLANNER', onRetry, abortSignal);
         let rawOutput = '';
         
         for await (const chunk of stream) {
