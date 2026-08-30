@@ -1,8 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAgentStream } from './hooks/useAgentStream';
-import { Paperclip, ArrowUp, Check, Loader2, Sparkles, X, FileText, Code2, BookOpen, Download, AlertTriangle, Settings, BrainCircuit, CheckCircle, Copy } from 'lucide-react';
+import { Paperclip, ArrowUp, Check, Loader2, Sparkles, X, FileText, Code2, BookOpen, Download } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
-import { motion, AnimatePresence } from 'framer-motion';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
@@ -22,7 +21,6 @@ function App() {
   const [started, setStarted] = useState(false);
   const [execLoadingMsgIdx, setExecLoadingMsgIdx] = useState(0);
   const [history, setHistory] = useState<any[]>([]);
-  const [isCopied, setIsCopied] = useState(false);
   
   const { state, isProcessing, error, liveResearchText, livePlanText, liveCodeText, startPlanning, startExecution, resetState } = useAgentStream();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -158,74 +156,6 @@ function App() {
       {started && (
         <main className="flex-1 w-full max-w-3xl flex flex-col gap-6 px-6 pb-40 overflow-y-auto mt-4 custom-scrollbar relative z-0">
           
-          {/* Stepper / Timeline Vivo */}
-          <div className="w-full flex items-center justify-between mb-4 px-4 relative shrink-0">
-             <div className="absolute top-1/2 left-8 right-8 h-px bg-white/5 -z-10 -translate-y-1/2" />
-             
-             {/* Passo 1 */}
-             <div className="flex flex-col items-center gap-2">
-                <div 
-                  className={`w-8 h-8 rounded-full flex items-center justify-center border transition-all ${
-                     state?.executionStatus === 'INITIALIZED' || state?.executionStatus === 'RESEARCH_STREAMING' 
-                     ? 'bg-blue-500/20 border-blue-500 text-blue-400 ring-2 ring-blue-500/20 ring-offset-2 ring-offset-[#131314] animate-pulse' 
-                     : state?.executionStatus && state?.executionStatus !== 'FAILED_RESEARCH' && state?.executionStatus !== 'QUOTA_EXCEEDED'
-                     ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400' 
-                     : 'bg-[#18181b] border-white/10 text-gray-500'
-                  }`}
-                >
-                  {(state?.executionStatus && state?.executionStatus !== 'INITIALIZED' && state?.executionStatus !== 'RESEARCH_STREAMING' && state?.executionStatus !== 'FAILED_RESEARCH' && state?.executionStatus !== 'QUOTA_EXCEEDED') 
-                    ? <Check className="w-4 h-4" /> 
-                    : <BrainCircuit className="w-4 h-4" />
-                  }
-                </div>
-                <span className={`text-[10px] uppercase tracking-wider font-medium ${state?.executionStatus === 'INITIALIZED' || state?.executionStatus === 'RESEARCH_STREAMING' ? 'text-blue-400' : 'text-gray-500'}`}>
-                  1. Destilação
-                </span>
-             </div>
-
-             {/* Passo 2 */}
-             <div className="flex flex-col items-center gap-2">
-                <div 
-                  className={`w-8 h-8 rounded-full flex items-center justify-center border transition-all ${
-                     state?.executionStatus === 'PLANNING_STREAMING' || state?.executionStatus === 'RESEARCH_COMPLETED' || state?.executionStatus === 'PLANNING_COMPLETED' && !state.generatedCode
-                     ? 'bg-purple-500/20 border-purple-500 text-purple-400 ring-2 ring-purple-500/20 ring-offset-2 ring-offset-[#131314] animate-pulse' 
-                     : state?.generatedCode 
-                     ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400'
-                     : 'bg-[#18181b] border-white/10 text-gray-500'
-                  }`}
-                >
-                  {state?.generatedCode 
-                    ? <Check className="w-4 h-4" /> 
-                    : <FileText className="w-4 h-4" />
-                  }
-                </div>
-                <span className={`text-[10px] uppercase tracking-wider font-medium ${state?.executionStatus === 'PLANNING_STREAMING' || state?.executionStatus === 'RESEARCH_COMPLETED' || state?.executionStatus === 'PLANNING_COMPLETED' && !state.generatedCode ? 'text-purple-400' : 'text-gray-500'}`}>
-                  2. Arquitetura
-                </span>
-             </div>
-
-             {/* Passo 3 */}
-             <div className="flex flex-col items-center gap-2">
-                <div 
-                  className={`w-8 h-8 rounded-full flex items-center justify-center border transition-all ${
-                     state?.executionStatus === 'CODE_STREAMING' || (isProcessing && state?.generatedCode)
-                     ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400 ring-2 ring-emerald-500/20 ring-offset-2 ring-offset-[#131314] animate-pulse' 
-                     : state?.executionStatus === 'SUCCESS_VERIFIED' || state?.executionStatus === 'CODE_GENERATED'
-                     ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.2)]'
-                     : 'bg-[#18181b] border-white/10 text-gray-500'
-                  }`}
-                >
-                  {(state?.executionStatus === 'SUCCESS_VERIFIED' || state?.executionStatus === 'CODE_GENERATED') && !isProcessing
-                    ? <CheckCircle className="w-4 h-4" />
-                    : <Code2 className="w-4 h-4" />
-                  }
-                </div>
-                <span className={`text-[10px] uppercase tracking-wider font-medium ${state?.executionStatus === 'CODE_STREAMING' || state?.executionStatus === 'SUCCESS_VERIFIED' || state?.executionStatus === 'CODE_GENERATED' ? 'text-emerald-400' : 'text-gray-500'}`}>
-                  3. Síntese
-                </span>
-             </div>
-          </div>
-          
           {/* Histórico Anterior */}
           {history.map((pastState, i) => (
              <React.Fragment key={i}>
@@ -273,15 +203,10 @@ function App() {
                <div className="flex flex-col gap-2 w-full">
                  
                  {/* Live Streaming Texts e Terminal de Compressão */}
-                 {/* Ocultamos o terminal se CODE_STREAMING começar para não poluir demais a tela final, mas mantemos visível após o plano */}
-                 {(!state || (state.executionStatus !== 'CODE_STREAMING' && state.executionStatus !== 'SUCCESS_VERIFIED' && state.executionStatus !== 'CODE_GENERATED' && state.executionStatus !== 'FAILED_COMPILATION')) && (
-                   <AnimatePresence mode="wait">
-                     <motion.div 
-                       initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.4, ease: "easeOut" }}
-                       className="flex flex-col gap-3 w-full mt-1.5"
-                     >
-                       <div className="flex items-center gap-3 text-blue-400 text-[15px] py-2 animate-pulse bg-blue-900/10 border border-blue-500/20 px-4 rounded-xl w-fit shadow-lg shadow-blue-500/5">
-                         <Settings className="w-4 h-4 animate-spin" /> Mapeando componentes e extraindo contexto...
+                 {(!state || (isProcessing && (state.executionStatus === 'INITIALIZED' || state.executionStatus === 'RESEARCH_STREAMING'))) && (
+                     <div className="flex flex-col gap-3 animate-in fade-in duration-500 w-full mt-1.5">
+                       <div className="flex items-center gap-3 text-blue-400 text-[15px] py-2 animate-pulse bg-blue-900/10 border border-blue-500/20 px-4 rounded-xl w-fit">
+                         <Loader2 className="w-4 h-4 animate-spin" /> ⚙️ Mapeando componentes para: {currentPrompt}
                        </div>
                        <div className="bg-[#18181b] border border-white/10 rounded-2xl overflow-hidden shadow-2xl w-full">
                          <div className="flex items-center justify-between px-4 py-3 bg-[#222] border-b border-white/5">
@@ -291,17 +216,12 @@ function App() {
                              {liveResearchText || "Conectando ao núcleo de IA..."}
                          </div>
                        </div>
-                     </motion.div>
-                   </AnimatePresence>
+                     </div>
                  )}
                  {isProcessing && state?.executionStatus === 'PLANNING_STREAMING' && (
-                   <motion.button 
-                     onClick={() => document.getElementById('approval-modal')?.classList.remove('hidden')}
-                     initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} 
-                     className="flex items-center gap-3 text-purple-400 text-[15px] py-2 mt-1.5 animate-pulse bg-purple-900/10 border border-purple-500/20 px-4 rounded-xl w-fit shadow-lg shadow-purple-500/5 cursor-pointer hover:bg-purple-900/20 transition-colors"
-                   >
-                      <Settings className="w-4 h-4 animate-spin" /> Escrevendo Plano Arquitetural PTCF (Clique para visualizar)...
-                   </motion.button>
+                     <div className="flex items-center gap-3 text-purple-400 text-[15px] py-2 mt-1.5 animate-pulse bg-purple-900/10 border border-purple-500/20 px-4 rounded-xl w-fit">
+                        <Loader2 className="w-4 h-4 animate-spin" /> Escrevendo Plano PTCF...
+                     </div>
                  )}
 
                  {/* Tratamento Gracioso de Falha Absoluta (Max Retries Esgotado ou 429) */}
@@ -311,7 +231,7 @@ function App() {
                           <X className="w-6 h-6 text-orange-400" />
                         </div>
                         <p className="text-orange-200 text-[15px] text-center leading-relaxed">
-                          <AlertTriangle className="w-4 h-4 inline-block mr-1 -mt-0.5 text-orange-500" /> A cota temporária de requisições foi excedida ou houve falha de conexão. Tente novamente ou reduza o tamanho da documentação anexa.
+                          ⚠️ A cota temporária de requisições foi excedida ou houve falha de conexão. Tente novamente ou reduza o tamanho da documentação anexa.
                         </p>
                         <button onClick={handleReset} className="mt-4 flex items-center gap-2 px-6 py-2.5 bg-orange-500/20 hover:bg-orange-500/30 rounded-full text-sm font-medium text-orange-200 transition-colors cursor-pointer border border-orange-500/30">
                           Tentar Novamente
@@ -319,23 +239,15 @@ function App() {
                      </div>
                  )}
 
-                 {/* Exibição do Plano (agora permanece visível mesmo após gerar código) */}
-                 {(state?.plannerMessage || state?.executionStatus === 'PLANNING_COMPLETED') && (
-                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-4 mb-2">
+                 {state?.executionStatus === 'PLANNING_COMPLETED' && !state.generatedCode && !isProcessing && (
+                    <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
                       <div className="text-gray-200 text-[15px] mt-1.5 leading-relaxed prose prose-invert prose-p:my-1 prose-headings:text-gray-100 prose-a:text-purple-400">
-                         <ReactMarkdown components={markdownComponents}>{(state.plannerMessage || "Plano gerado e aguardando sua revisão.").replace(/<\/?MESSAGE>/gi, '').replace(/<\/?PLAN>/gi, '')}</ReactMarkdown>
+                         <ReactMarkdown components={markdownComponents}>{state.plannerMessage || "Plano gerado e aguardando sua revisão."}</ReactMarkdown>
                       </div>
-                      {(!state.generatedCode && !isProcessing) && (
-                        <motion.button 
-                          whileHover={{ scale: 1.02 }} 
-                          whileTap={{ scale: 0.98 }}
-                          onClick={() => document.getElementById('approval-modal')?.classList.remove('hidden')} 
-                          className="flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium text-black bg-gray-200 hover:bg-white transition-colors cursor-pointer w-fit mt-2 shadow-lg shadow-white/5"
-                        >
-                          <Check className="w-4 h-4" /> Revisar e Aprovar Plano
-                        </motion.button>
-                      )}
-                    </motion.div>
+                      <button onClick={() => document.getElementById('approval-modal')?.classList.remove('hidden')} className="flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium text-black bg-gray-200 hover:bg-white transition-all cursor-pointer w-fit mt-2">
+                        <Check className="w-4 h-4" /> Revisar e Aprovar Plano
+                      </button>
+                    </div>
                  )}
                </div>
             </div>
@@ -344,22 +256,24 @@ function App() {
           {/* Modal de Approval */}
           {((isProcessing && state?.executionStatus === 'PLANNING_STREAMING') || 
             (state?.executionStatus === 'PLANNING_COMPLETED' && !state.generatedCode && !isProcessing)) && (
-            <div id="approval-modal" className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md bg-zinc-950/80 animate-in fade-in duration-300">
-              <div className="bg-zinc-900/50 border border-zinc-800 rounded-3xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden shadow-2xl backdrop-blur-xl">
+            <div id="approval-modal" className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
+              <div className="bg-[#18181b] border border-white/10 rounded-3xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden shadow-2xl">
                 <div className="p-6 border-b border-white/5 flex justify-between items-center bg-[#1e1e1e]">
                    <h2 className="text-xl font-medium text-gray-100 flex items-center gap-2">
                      <Sparkles className="w-5 h-5 text-purple-400" /> 
                      Plano de Ação (PTCF)
                    </h2>
-                   <button onClick={() => document.getElementById('approval-modal')?.classList.add('hidden')} className="text-gray-500 hover:text-gray-200 transition-colors p-1 rounded-full hover:bg-white/5 cursor-pointer">
-                      <X className="w-5 h-5" />
-                   </button>
+                   {state?.executionStatus === 'PLANNING_COMPLETED' && (
+                     <button onClick={() => document.getElementById('approval-modal')?.classList.add('hidden')} className="p-2 hover:bg-white/5 rounded-full text-gray-400 hover:text-white transition-colors cursor-pointer">
+                       <X className="w-5 h-5" />
+                     </button>
+                   )}
                 </div>
                 
                 {/* Formatação Rica via React Markdown */}
                 <div className="p-8 overflow-y-auto custom-scrollbar prose prose-invert max-w-none text-gray-300 prose-headings:text-gray-100 prose-a:text-purple-400 prose-strong:text-emerald-400">
                    <ReactMarkdown components={markdownComponents}>
-                     {(state.executionStatus === 'PLANNING_STREAMING' ? (livePlanText || '') : (state.ptcfMetaPrompt || '')).replace(/<\/?MESSAGE>/gi, '').replace(/<\/?PLAN>/gi, '')}
+                     {state.executionStatus === 'PLANNING_STREAMING' ? livePlanText : (state.ptcfMetaPrompt || '')}
                    </ReactMarkdown>
                 </div>
 
@@ -370,15 +284,15 @@ function App() {
                        </div>
                    ) : (
                        <>
-                         <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => exportMarkdown((state?.ptcfMetaPrompt || '').replace(/<\/?MESSAGE>/gi, '').replace(/<\/?PLAN>/gi, ''), 'plano-de-acao')} className="px-5 py-3 rounded-full text-sm font-medium text-gray-300 bg-white/5 hover:bg-white/10 transition-colors cursor-pointer flex items-center gap-2">
+                         <button onClick={() => exportMarkdown(state?.ptcfMetaPrompt || '', 'plano-de-acao')} className="px-5 py-3 rounded-full text-sm font-medium text-gray-300 bg-white/5 hover:bg-white/10 transition-colors cursor-pointer flex items-center gap-2">
                            <Download className="w-4 h-4" /> Exportar .md
-                         </motion.button>
-                         <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={handleAdjustPlan} className="px-6 py-3 rounded-full text-sm font-medium text-gray-300 bg-white/5 hover:bg-white/10 transition-colors cursor-pointer">
+                         </button>
+                         <button onClick={handleAdjustPlan} className="px-6 py-3 rounded-full text-sm font-medium text-gray-300 bg-white/5 hover:bg-white/10 transition-colors cursor-pointer">
                            Ajustar Plano
-                         </motion.button>
-                         <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => { document.getElementById('approval-modal')?.classList.add('hidden'); handleApprove(); }} className="flex items-center gap-2 px-6 py-3 rounded-full text-sm font-medium text-black bg-gradient-to-r from-gray-200 to-white hover:opacity-90 transition-opacity cursor-pointer shadow-lg shadow-white/5">
+                         </button>
+                         <button onClick={() => { document.getElementById('approval-modal')?.classList.add('hidden'); handleApprove(); }} className="flex items-center gap-2 px-6 py-3 rounded-full text-sm font-medium text-black bg-gradient-to-r from-gray-200 to-white hover:opacity-90 transition-opacity cursor-pointer shadow-lg shadow-white/5">
                            <Check className="w-4 h-4" /> Aprovar e Gerar Código
-                         </motion.button>
+                         </button>
                        </>
                    )}
                 </div>
@@ -440,18 +354,12 @@ function App() {
                       <div className="bg-[#18181b] border border-white/10 rounded-2xl overflow-hidden shadow-2xl w-full">
                         <div className="flex items-center justify-between px-4 py-3 bg-[#222] border-b border-white/5">
                            <span className="text-xs font-mono text-emerald-400/80 flex items-center gap-2"><Code2 className="w-4 h-4"/> output.ts</span>
-                           <motion.button 
-                             whileHover={{ scale: 1.05 }}
-                             whileTap={{ scale: 0.95 }}
-                             onClick={() => {
-                               navigator.clipboard.writeText(state.generatedCode || '');
-                               setIsCopied(true);
-                               setTimeout(() => setIsCopied(false), 2000);
-                             }}
-                             className="text-xs font-medium bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-full text-gray-300 transition-colors cursor-pointer flex items-center gap-2"
+                           <button 
+                             onClick={() => navigator.clipboard.writeText(state.generatedCode || '')}
+                             className="text-xs font-medium bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-full text-gray-300 transition-colors cursor-pointer"
                            >
-                             {isCopied ? <><Check className="w-4 h-4 text-emerald-400" /> Copiado</> : <><Copy className="w-4 h-4" /> Copiar Código</>}
-                           </motion.button>
+                             Copiar Código
+                           </button>
                         </div>
                         <div className="max-h-[60vh] overflow-y-auto custom-scrollbar text-[13px]">
                            {/* Highlight nativo do TypeScript */}
