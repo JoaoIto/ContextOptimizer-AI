@@ -11,7 +11,7 @@ const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 export async function generateStream(
     systemPrompt: string, 
     userPrompt: string, 
-    modelName: string = 'gemini-2.0-flash',
+    modelName: string = 'gemini-2.5-flash',
     temperature: number = 0.2,
     onRetry?: (msg: string) => void
 ) {

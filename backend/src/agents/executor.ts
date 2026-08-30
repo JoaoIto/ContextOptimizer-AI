@@ -14,7 +14,7 @@ ${state.ptcfMetaPrompt}
 ${state.errorFeedbackLog ? `\nATENÇÃO! O CÓDIGO ANTERIOR FALHOU NA COMPILAÇÃO. AQUI ESTÁ O ERRO DO TERMINAL:\n${state.errorFeedbackLog}\nCORRIJA O CÓDIGO E EMITA APENAS O NOVO CÓDIGO CRU DENTRO DA TAG <CODE>.` : ''}`;
 
     try {
-        const stream = await generateStream(systemPrompt, userPrompt, 'gemini-2.0-flash', 0.1, onRetry);
+        const stream = await generateStream(systemPrompt, userPrompt, 'gemini-2.5-flash', 0.1, onRetry);
         let rawOutput = '';
         
         for await (const chunk of stream) {

@@ -249,10 +249,10 @@ function App() {
                           <X className="w-6 h-6 text-red-400" />
                         </div>
                         <p className="text-gray-300 text-[15px] text-center leading-relaxed">
-                          ⚠️ O Google Gemini recusou a conexão por excesso de requisições. Reduza o tamanho da documentação anexada.
+                          ⚠️ A API do Google está instável. Tente novamente.
                         </p>
                         <button onClick={handleReset} className="mt-4 px-6 py-2.5 bg-white/5 hover:bg-white/10 rounded-full text-sm font-medium text-gray-200 transition-colors cursor-pointer border border-white/10">
-                          Editar e Tentar Novamente
+                          Tentar Novamente
                         </button>
                      </div>
                  )}

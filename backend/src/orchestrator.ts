@@ -67,6 +67,8 @@ export async function* runPlanningPipeline(initialState: AgentState): AsyncGener
     
     if (currentState.executionStatus.includes("FAILED") || currentState.executionStatus === "QUOTA_EXCEEDED") return;
 
+    currentState.rawDocumentContext = "";
+
     const plannerGen = streamAgent(runPlanner, currentState, "PLANNING_STREAMING", "streamingPlanChunk");
     while (true) {
         const next = await plannerGen.next();
@@ -80,6 +82,10 @@ export async function* runPlanningPipeline(initialState: AgentState): AsyncGener
 // Fase 3 e 4: Execução e Sandbox
 export async function* runExecutionPipeline(state: AgentState): AsyncGenerator<AgentState, void, unknown> {
     let currentState = AgentStateSchema.parse(state);
+    
+    currentState.rawDocumentContext = "";
+    currentState.rawUserPrompt = "";
+    currentState.compressedContext = "";
     
     let retries = 3;
     let success = false;

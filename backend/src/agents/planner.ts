@@ -24,7 +24,7 @@ Olá! Analisei seu pedido para construir um **Orquestrador de Projetos**. O cont
     const userPrompt = `OBJETIVO DO DESENVOLVEDOR:\n${state.rawUserPrompt}\n\nCONTEXTO COMPRIMIDO (REGRAS):\n${state.compressedContext}`;
 
     try {
-        const stream = await generateStream(systemPrompt, userPrompt, 'gemini-2.0-flash', 0.2, onRetry);
+        const stream = await generateStream(systemPrompt, userPrompt, 'gemini-2.5-flash', 0.2, onRetry);
         let rawOutput = '';
         
         for await (const chunk of stream) {

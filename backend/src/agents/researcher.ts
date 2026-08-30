@@ -15,7 +15,7 @@ REGRAS DE COMPRESSÃO:
     const userPrompt = `DOCUMENTAÇÃO BRUTA:\n${state.rawDocumentContext || 'Nenhuma documentação fornecida.'}\n\nO que o usuário quer construir:\n${state.rawUserPrompt}`;
 
     try {
-        const stream = await generateStream(systemPrompt, userPrompt, 'gemini-2.0-flash', 0.2, onRetry);
+        const stream = await generateStream(systemPrompt, userPrompt, 'gemini-2.5-flash', 0.2, onRetry);
         let rawOutput = '';
         
         for await (const chunk of stream) {
