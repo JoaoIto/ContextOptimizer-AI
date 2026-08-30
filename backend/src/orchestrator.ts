@@ -65,7 +65,9 @@ export async function* runPlanningPipeline(initialState: AgentState): AsyncGener
     
     yield currentState; // Manda o RESEARCH_COMPLETED
     
-    if (currentState.executionStatus.includes("FAILED") || currentState.executionStatus === "QUOTA_EXCEEDED") return;
+
+
+    if (currentState.executionStatus.includes("FAILED")) return;
 
     currentState.rawDocumentContext = "";
 
@@ -76,6 +78,8 @@ export async function* runPlanningPipeline(initialState: AgentState): AsyncGener
         yield next.value;
     }
     
+
+
     yield currentState; // Manda o PLANNING_COMPLETED
 }
 
@@ -98,6 +102,8 @@ export async function* runExecutionPipeline(state: AgentState): AsyncGenerator<A
             yield next.value;
         }
         
+
+
         yield currentState; // Manda o CODE_GENERATED
         
         if (currentState.executionStatus.includes("FAILED")) break;

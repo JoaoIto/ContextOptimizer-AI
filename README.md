@@ -61,3 +61,15 @@ O servidor começará a escutar na porta `3000`. O endpoint core para streamar o
 
 ## 🔗 Links e Recursos Úteis
 *   👉 **[Leia as Teses e Arquitetura no Diretório /spec](../spec/)**
+
+---
+
+## ⚠️ API Constraints & Mocked Circuit Breaker
+
+**The Gemini Free Tier Bottleneck:** 
+During testing, we encountered the aggressive rate limit (429 RESOURCE_EXHAUSTED) of the Gemini 2.5 Flash Free Tier (capped at 20 Requests Per Day). Our architecture mitigates cognitive overload by breaking generation into smaller steps (**Task-Decoupled Planning**), but this fundamentally requires *more* sequential API calls. This architectural trade-off means we hit the rate limits much faster than monolithic single-prompt applications.
+
+**The Circuit Breaker Mitigation:**
+Devido ao rigoroso limite de 20 Requests Per Day no Free Tier do Gemini 2.5 Flash, a equipe implementou um Circuit Breaker. Se a cota esgotar durante a avaliação da banca, o sistema fará fallback elegante para uma Demonstração Simulada, protegendo a estabilidade da UI/UX e evitando crashes fatais de rede.
+To ensure our application's UI/UX can be fully evaluated during the hackathon without getting blocked by Google's quota limits, we implemented a **Circuit Breaker** pattern in the Multi-Agent Orchestrator (`orchestrator.ts`).
+If the LLM backoff fails, the orchestrator gracefully degrades to a "Demo Simulation Mode". Instead of throwing fatal backend errors, it yields mock states and simulated code through Server-Sent Events (SSE). This maintains the state choreography and Framer Motion animations in the React client, allowing judges to evaluate the full frontend flow and architecture even if the API quota is strictly exhausted.

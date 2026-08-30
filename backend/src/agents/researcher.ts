@@ -1,5 +1,5 @@
 import { AgentState } from "../core/state";
-import { generateStream } from "../utils/llm";
+import { generateUniversalStream } from "../utils/llm";
 
 export async function runResearcher(state: AgentState, onChunk?: (text: string) => void, onRetry?: (msg: string) => void): Promise<AgentState> {
     const systemPrompt = `You are a deterministic, lossy prompt compression engine operating on raw context payloads. Your goal is to maximize information density by pruning syntactic redundancy while strictly preserving factual semantic anchors, verbatim code structures, variable names, and precise configurations.
@@ -15,7 +15,7 @@ Never hallucinate. Execute prompt pruning now. Squeeze the provided payload to 1
     const userPrompt = `DOCUMENTAÇÃO BRUTA:\n${state.rawDocumentContext || 'Nenhuma documentação fornecida.'}\n\nO que o usuário quer construir:\n${state.rawUserPrompt}`;
 
     try {
-        const stream = await generateStream(systemPrompt, userPrompt, 'gemini-2.5-flash', 0.2, onRetry);
+        const stream = await generateUniversalStream(userPrompt, systemPrompt, 'RESEARCHER', onRetry);
         let rawOutput = '';
         
         for await (const chunk of stream) {

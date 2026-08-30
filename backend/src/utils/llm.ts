@@ -1,5 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
+import OpenAI from 'openai';
 
 dotenv.config();
 
@@ -9,61 +10,140 @@ export const GOLDEN_MODELS = {
 
 export const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
+export const universalClient = new OpenAI({
+  baseURL: process.env.UNIVERSAL_API_BASE || 'https://openrouter.ai/api/v1',
+  apiKey: process.env.UNIVERSAL_API_KEY || 'sua_chave_openrouter_ou_groq',
+  defaultHeaders: {
+    'HTTP-Referer': 'https://contextoptimizer.ai',
+    'X-Title': 'ContextOptimizer-AI'
+  }
+});
+
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
-export async function generateStream(
-    systemPrompt: string, 
+export async function* generateUniversalStream(
     userPrompt: string, 
-    _modelName: string = GOLDEN_MODELS.STABLE_WORKHORSE, // Ignorado, fixo no STABLE_WORKHORSE
-    temperature: number = 0.2,
-    onRetry?: (msg: string) => void
-) {
-    const targetModel = GOLDEN_MODELS.STABLE_WORKHORSE;
-    const maxRetries = 3;
-    let attempt = 0;
+    systemInstruction: string, 
+    agentType: 'RESEARCHER' | 'PLANNER' | 'EXECUTOR',
+    onRetry?: (msg: string) => void,
+): AsyncGenerator<{ text: string }> {
+    const maxRetries = 2;
 
-    while (attempt <= maxRetries) {
-        try {
-            if (attempt === 0) {
-                console.log(`[🤖] LLM Request: Iniciando STREAMING com modelo ${targetModel}...`);
-            } else {
-                console.log(`[🔄] Retry ${attempt}/${maxRetries} via modelo: ${targetModel}...`);
-            }
-            
-            // Throttling / P-Queue simplificado (Delay garantido de 2s antes de qualquerr requisição nova para respeitar RPM rate limit)
-            await delay(2000);
-
-            return await ai.models.generateContentStream({
-                model: targetModel,
-                contents: userPrompt,
-                config: {
-                    systemInstruction: systemPrompt,
-                    temperature: temperature,
+    if (agentType === 'RESEARCHER') {
+        let attempt = 0;
+        while (attempt <= maxRetries) {
+            try {
+                const stream = await universalClient.chat.completions.create({
+                    model: 'meta-llama/llama-3.1-8b-instruct',
+                    messages: [
+                        { role: 'system', content: systemInstruction },
+                        { role: 'user', content: userPrompt }
+                    ],
+                    stream: true,
+                    temperature: 0.2
+                });
+                for await (const chunk of stream) {
+                    const content = chunk.choices[0]?.delta?.content || '';
+                    if (content) yield { text: content };
                 }
-            });
-        } catch (error: any) {
-            const isTimeoutOrRateLimit = error.message?.includes('503') || error.message?.includes('429') || error.message?.includes('Timeout');
-            
-            if (attempt < maxRetries && (isTimeoutOrRateLimit || attempt === 0)) {
-                const backoffTimes = [4000, 8000, 15000];
-                const waitTime = backoffTimes[attempt] || 15000;
-                attempt++;
-                const msg = `Atraso na API detectado. Aplicando retentativa de segurança... (Tentativa ${attempt}/${maxRetries})`;
-                console.log(`[⚠️] ${msg}`);
-                
-                if (onRetry) {
-                    onRetry(msg);
+                return; // Sucesso, sai do loop
+            } catch (error: any) {
+                console.error(`[🔥] ERROR IN RESEARCHER API CALL (Tentativa ${attempt + 1}/${maxRetries + 1}):`, error.message);
+                if (attempt < maxRetries) {
+                    attempt++;
+                    if (onRetry) onRetry(`Atraso na rede OpenRouter. Retentando pesquisa (Tentativa ${attempt}/${maxRetries})...`);
+                    await delay(3000 * attempt);
+                } else {
+                    throw error;
                 }
-                
-                await delay(waitTime);
-            } else {
-                console.error(`[🔥] LLM Generation Stream Error (Esgotou retentativas)`, error);
-                const isQuotaExceeded = error.message?.includes('429');
-                const errMsg = isQuotaExceeded ? `QUOTA_EXCEEDED: ${error.message}` : (error.message || "Falha na comunicação com o LLM.");
-                throw new Error(errMsg);
             }
         }
+    } else if (agentType === 'PLANNER') {
+        let attempt = 0;
+        while (attempt <= maxRetries) {
+            try {
+                const stream = await universalClient.chat.completions.create({
+                    model: 'meta-llama/llama-3.3-70b-instruct',
+                    messages: [
+                        { role: 'system', content: systemInstruction },
+                        { role: 'user', content: userPrompt }
+                    ],
+                    stream: true,
+                    temperature: 0.2
+                });
+                for await (const chunk of stream) {
+                    const content = chunk.choices[0]?.delta?.content || '';
+                    if (content) yield { text: content };
+                }
+                return; // Sucesso, sai do loop
+            } catch (error: any) {
+                console.error(`[🔥] ERROR IN PLANNER API CALL (Tentativa ${attempt + 1}/${maxRetries + 1}):`, error.message);
+                if (attempt < maxRetries) {
+                    attempt++;
+                    if (onRetry) onRetry(`Atraso na rede OpenRouter. Retentando planejamento (Tentativa ${attempt}/${maxRetries})...`);
+                    await delay(3000 * attempt);
+                } else {
+                    throw error;
+                }
+            }
+        }
+    } else if (agentType === 'EXECUTOR') {
+        let useFallback = false;
+        try {
+            const stream = await ai.models.generateContentStream({
+                model: 'gemini-2.5-flash',
+                contents: userPrompt,
+                config: {
+                    systemInstruction: systemInstruction,
+                    temperature: 0.1,
+                }
+            });
+            for await (const chunk of stream) {
+                if (chunk.text) yield { text: chunk.text };
+            }
+            return;
+        } catch (error: any) {
+            const isHardQuota = error.message?.includes('429') || error.message?.includes('limit: 20') || error.message?.includes('QUOTA') || error.message?.includes('403');
+            if (isHardQuota || error.status === 429) {
+                console.error(`[🔥] LLM Generation Quota Exceeded for Gemini. Disparando Fallback imediato para Qwen via universalClient.`, error.message);
+                if (onRetry) onRetry("Fallback de provedor ativado (Cota Google excedida).");
+                useFallback = true;
+            } else {
+                throw error;
+            }
+        }
+
+        if (useFallback) {
+            let attempt = 0;
+            while (attempt <= maxRetries) {
+                try {
+                    const stream = await universalClient.chat.completions.create({
+                        model: 'meta-llama/llama-3.3-70b-instruct',
+                        messages: [
+                            { role: 'system', content: systemInstruction },
+                            { role: 'user', content: userPrompt }
+                        ],
+                        stream: true,
+                        temperature: 0.1
+                    });
+                    for await (const chunk of stream) {
+                        const content = chunk.choices[0]?.delta?.content || '';
+                        if (content) yield { text: content };
+                    }
+                    return; // Sucesso, sai do loop
+                } catch (error: any) {
+                    console.error(`[🔥] ERROR IN EXECUTOR FALLBACK (Tentativa ${attempt + 1}/${maxRetries + 1}):`, error.message);
+                    if (attempt < maxRetries) {
+                        attempt++;
+                        if (onRetry) onRetry(`Retentando Qwen Fallback (Tentativa ${attempt}/${maxRetries})...`);
+                        await delay(3000 * attempt);
+                    } else {
+                        throw error;
+                    }
+                }
+            }
+        }
+    } else {
+        throw new Error('Unknown agent type');
     }
-    
-    throw new Error("Falha inesperada no streaming LLM.");
 }

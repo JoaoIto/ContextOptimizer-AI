@@ -1,11 +1,13 @@
 import { AgentState } from "../core/state";
-import { generateStream } from "../utils/llm";
+import { generateUniversalStream } from "../utils/llm";
 
 export async function runExecutor(state: AgentState, onChunk?: (text: string) => void, onRetry?: (msg: string) => void): Promise<AgentState> {
     const systemPrompt = `Você é um Engenheiro de Software Sênior especialista em Node.js e TypeScript.
 Sua única função é escrever o código final e funcional baseado no plano aprovado.
 - Você deve emitir o script completo em um único arquivo, com imports, lógicas e exports necessários.
 - Não crie placeholders ou comentários "adicione aqui". Escreva a implementação real.
+- OBRIGATÓRIO: Se você for instanciar um servidor HTTP, OBRIGATORIAMENTE defina a porta como 0 (ex: server.listen(0)) ou process.env.PORT || 0 para evitar erros EADDRINUSE durante a compilação no Sandbox.
+- OBRIGATÓRIO: NÃO utilize bibliotecas externas (como express, axios, cors, etc). Utilize EXCLUSIVAMENTE os módulos nativos do Node.js (http, fs, etc). O script será testado em uma Sandbox limpa sem node_modules.
 - OBRIGATÓRIO: O código final deve estar encapsulado dentro de tags <CODE> e </CODE>. Não retorne Markdown como \`\`\`typescript, APENAS as tags <CODE>.`;
 
     const userPrompt = `META PROMPT PTCF:
@@ -14,7 +16,7 @@ ${state.ptcfMetaPrompt}
 ${state.errorFeedbackLog ? `\nATENÇÃO! O CÓDIGO ANTERIOR FALHOU NA COMPILAÇÃO. AQUI ESTÁ O ERRO DO TERMINAL:\n${state.errorFeedbackLog}\nCORRIJA O CÓDIGO E EMITA APENAS O NOVO CÓDIGO CRU DENTRO DA TAG <CODE>.` : ''}`;
 
     try {
-        const stream = await generateStream(systemPrompt, userPrompt, 'gemini-2.5-flash', 0.1, onRetry);
+        const stream = await generateUniversalStream(userPrompt, systemPrompt, 'EXECUTOR', onRetry);
         let rawOutput = '';
         
         for await (const chunk of stream) {
