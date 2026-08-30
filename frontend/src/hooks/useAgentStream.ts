@@ -38,6 +38,7 @@ export interface AgentState {
   executionStatus: ExecutionStatus;
   sandboxCompilationPassed: boolean;
   errorFeedbackLog?: string;
+  executorMessage?: string;
   metrics?: Metrics;
 }
 

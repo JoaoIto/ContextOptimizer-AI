@@ -31,7 +31,7 @@ function App() {
 
   // Loading Animado do Executor
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval>;
     if (isProcessing) {
       interval = setInterval(() => {
         setExecLoadingMsgIdx((prev) => (prev + 1) % EXECUTOR_LOADING_MESSAGES.length);
