@@ -212,7 +212,7 @@ function App() {
                          <div className="flex items-center justify-between px-4 py-3 bg-[#222] border-b border-white/5">
                             <span className="text-xs font-mono text-blue-400/80 flex items-center gap-2"><Code2 className="w-4 h-4"/> terminal.log</span>
                          </div>
-                         <div className="max-h-[40vh] overflow-y-auto custom-scrollbar text-[13px] text-gray-300 font-mono whitespace-pre-wrap p-6 opacity-80">
+                         <div className="max-h-[40vh] overflow-y-auto custom-scrollbar text-[13px] text-emerald-400 font-mono whitespace-pre-wrap p-6">
                              {liveResearchText || "Conectando ao núcleo de IA..."}
                          </div>
                        </div>
@@ -224,34 +224,16 @@ function App() {
                      </div>
                  )}
 
-                 {/* Tratamento de Quota Exceeded (429) */}
-                 {state?.executionStatus === 'QUOTA_EXCEEDED' && (
-                    <div className="flex flex-col items-center justify-center gap-4 mt-4 mb-4 p-8 bg-amber-900/10 border border-amber-500/20 rounded-2xl animate-in zoom-in-95 duration-500 shadow-xl">
-                       <div className="w-12 h-12 rounded-full bg-amber-500/20 flex items-center justify-center mb-2">
-                         <Sparkles className="w-6 h-6 text-amber-400" />
-                       </div>
-                       <p className="text-gray-300 text-[15px] text-center leading-relaxed">
-                         🛑 Limite de acessos gratuitos do Gemini atingido temporariamente.
-                       </p>
-                       <p className="text-gray-400 text-sm text-center">
-                         Como nossa solução reduz 90% do volume de dados (Context Compression), sugerimos aguardar cerca de 30 a 60 segundos antes de tentar gerar novamente.
-                       </p>
-                       <button onClick={handleStartPlan} className="mt-4 flex items-center gap-2 px-6 py-2.5 bg-amber-500/20 hover:bg-amber-500/30 rounded-full text-sm font-medium text-amber-200 transition-colors cursor-pointer border border-amber-500/30">
-                         <Check className="w-4 h-4" /> Tentar Novamente
-                       </button>
-                    </div>
-                 )}
-
-                 {/* Tratamento Gracioso de Falha Absoluta (Max Retries Esgotado) */}
-                 {((state?.executionStatus?.includes('FAILED') && !state?.executionStatus?.includes('CODING') && !state?.executionStatus?.includes('COMPILATION')) || (error && (!state || state.executionStatus === 'INITIALIZED' || state.executionStatus === 'RESEARCH_COMPLETED' || state.executionStatus === 'RETRYING_API'))) && (
-                     <div className="flex flex-col items-center justify-center gap-4 mt-4 mb-4 p-8 bg-[#18181b] border border-white/10 rounded-2xl animate-in zoom-in-95 duration-500 shadow-xl">
-                        <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center mb-2">
-                          <X className="w-6 h-6 text-red-400" />
+                 {/* Tratamento Gracioso de Falha Absoluta (Max Retries Esgotado ou 429) */}
+                 {(state?.executionStatus === 'QUOTA_EXCEEDED' || (state?.executionStatus?.includes('FAILED') && !state?.executionStatus?.includes('CODING') && !state?.executionStatus?.includes('COMPILATION')) || (error && (!state || state.executionStatus === 'INITIALIZED' || state.executionStatus === 'RESEARCH_COMPLETED' || state.executionStatus === 'RETRYING_API'))) && (
+                     <div className="flex flex-col items-center justify-center gap-4 mt-4 mb-4 p-8 bg-orange-900/10 border border-orange-500/20 rounded-2xl animate-in zoom-in-95 duration-500 shadow-xl">
+                        <div className="w-12 h-12 rounded-full bg-orange-500/20 flex items-center justify-center mb-2">
+                          <X className="w-6 h-6 text-orange-400" />
                         </div>
-                        <p className="text-gray-300 text-[15px] text-center leading-relaxed">
-                          ⚠️ A API do Google está instável. Tente novamente.
+                        <p className="text-orange-200 text-[15px] text-center leading-relaxed">
+                          ⚠️ A cota temporária de requisições foi excedida ou houve falha de conexão. Tente novamente ou reduza o tamanho da documentação anexa.
                         </p>
-                        <button onClick={handleReset} className="mt-4 px-6 py-2.5 bg-white/5 hover:bg-white/10 rounded-full text-sm font-medium text-gray-200 transition-colors cursor-pointer border border-white/10">
+                        <button onClick={handleReset} className="mt-4 flex items-center gap-2 px-6 py-2.5 bg-orange-500/20 hover:bg-orange-500/30 rounded-full text-sm font-medium text-orange-200 transition-colors cursor-pointer border border-orange-500/30">
                           Tentar Novamente
                         </button>
                      </div>

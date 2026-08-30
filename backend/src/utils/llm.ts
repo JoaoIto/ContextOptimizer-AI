@@ -3,31 +3,35 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-// Inicializa a instância do SDK do Gemini
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+export const GOLDEN_MODELS = {
+  STABLE_WORKHORSE: 'gemini-2.5-flash'
+} as const;
+
+export const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
 export async function generateStream(
     systemPrompt: string, 
     userPrompt: string, 
-    modelName: string = 'gemini-2.5-flash',
+    _modelName: string = GOLDEN_MODELS.STABLE_WORKHORSE, // Ignorado, fixo no STABLE_WORKHORSE
     temperature: number = 0.2,
     onRetry?: (msg: string) => void
 ) {
+    const targetModel = GOLDEN_MODELS.STABLE_WORKHORSE;
     const maxRetries = 3;
     let attempt = 0;
 
     while (attempt <= maxRetries) {
         try {
             if (attempt === 0) {
-                console.log(`[🤖] LLM Request: Iniciando STREAMING com modelo ${modelName}...`);
+                console.log(`[🤖] LLM Request: Iniciando STREAMING com modelo ${targetModel}...`);
             } else {
-                console.log(`[🔄] Retry ${attempt}/${maxRetries} via modelo: ${modelName}...`);
+                console.log(`[🔄] Retry ${attempt}/${maxRetries} via modelo: ${targetModel}...`);
             }
             
             return await ai.models.generateContentStream({
-                model: modelName,
+                model: targetModel,
                 contents: userPrompt,
                 config: {
                     systemInstruction: systemPrompt,
