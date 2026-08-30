@@ -1,5 +1,5 @@
 @import "tailwindcss";
-
+@plugin "@tailwindcss/typography";
 body {
   @apply bg-[#131314] text-gray-100 antialiased;
   font-family: 'Poppins', sans-serif;

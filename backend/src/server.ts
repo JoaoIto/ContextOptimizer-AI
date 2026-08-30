@@ -22,10 +22,11 @@ app.get('/api/stream/plan', async (req: Request, res: Response) => {
   const prompt = req.query.prompt as string;
   const document = req.query.document as string;
 
-  if (!prompt || !document) {
-    res.status(400).json({ error: 'Faltam os parâmetros.' });
+  if (!prompt) {
+    res.status(400).json({ error: 'O parâmetro prompt é obrigatório.' });
     return;
   }
+  const safeDocument = document || '';
 
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
@@ -35,7 +36,7 @@ app.get('/api/stream/plan', async (req: Request, res: Response) => {
 
   const initialState: AgentState = {
     rawUserPrompt: prompt,
-    rawDocumentContext: document,
+    rawDocumentContext: safeDocument,
     executionStatus: "INITIALIZED",
     sandboxCompilationPassed: false,
     metrics: { tokensSaved: 0, totalCost: 0, wallClockLatencyMs: 0 }

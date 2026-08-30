@@ -8,23 +8,33 @@ export interface Metrics {
 
 export type ExecutionStatus = 
   | "INITIALIZED"
+  | "RETRYING_API"
+  | "RESEARCH_STREAMING"
   | "RESEARCH_COMPLETED"
   | "FAILED_RESEARCH"
+  | "PLANNING_STREAMING"
   | "PLANNING_COMPLETED"
   | "FAILED_PLANNING"
+  | "CODE_STREAMING"
   | "CODE_GENERATED"
   | "FAILED_CODING"
   | "SUCCESS_VERIFIED"
   | "FAILED_COMPILATION"
   | "TIMEOUT_EXPIRED"
-  | "VALIDATION_EXCEPTION";
+  | "VALIDATION_EXCEPTION"
+  | "QUOTA_EXCEEDED";
 
 export interface AgentState {
   rawUserPrompt: string;
   rawDocumentContext: string;
   compressedContext?: string;
+  extractedSources?: string[];
   ptcfMetaPrompt?: string;
+  plannerMessage?: string;
   generatedCode?: string;
+  streamingResearchChunk?: string;
+  streamingPlanChunk?: string;
+  streamingCodeChunk?: string;
   executionStatus: ExecutionStatus;
   sandboxCompilationPassed: boolean;
   errorFeedbackLog?: string;
@@ -35,6 +45,11 @@ export function useAgentStream() {
   const [state, setState] = useState<AgentState | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Estados de Streaming Ao Vivo
+  const [liveResearchText, setLiveResearchText] = useState("");
+  const [livePlanText, setLivePlanText] = useState("");
+  const [liveCodeText, setLiveCodeText] = useState("");
 
   const startEventStream = (url: string) => {
     setIsProcessing(true);
@@ -54,9 +69,21 @@ export function useAgentStream() {
 
         setState(data as AgentState);
 
+        // Concatena os chunks ao vivo
+        if (data.executionStatus === "RESEARCH_STREAMING" && data.streamingResearchChunk) {
+            setLiveResearchText((prev) => prev + data.streamingResearchChunk);
+        }
+        if (data.executionStatus === "PLANNING_STREAMING" && data.streamingPlanChunk) {
+            setLivePlanText((prev) => prev + data.streamingPlanChunk);
+        }
+        if (data.executionStatus === "CODE_STREAMING" && data.streamingCodeChunk) {
+            setLiveCodeText((prev) => prev + data.streamingCodeChunk);
+        }
+
         if (
           data.executionStatus === "SUCCESS_VERIFIED" || 
           data.executionStatus === "PLANNING_COMPLETED" || 
+          data.executionStatus === "QUOTA_EXCEEDED" ||
           data.executionStatus.includes("FAILED") ||
           data.executionStatus.includes("EXCEPTION") ||
           data.executionStatus.includes("TIMEOUT")
@@ -79,6 +106,9 @@ export function useAgentStream() {
 
   const startPlanning = useCallback((prompt: string, documentContext: string) => {
     setState(null);
+    setLiveResearchText("");
+    setLivePlanText("");
+    setLiveCodeText("");
     const url = `http://localhost:3000/api/stream/plan?prompt=${encodeURIComponent(prompt)}&document=${encodeURIComponent(documentContext)}`;
     startEventStream(url);
   }, []);
@@ -106,7 +136,21 @@ export function useAgentStream() {
       setState(null);
       setError(null);
       setIsProcessing(false);
+      setLiveResearchText("");
+      setLivePlanText("");
+      setLiveCodeText("");
   }
 
-  return { state, isProcessing, error, startPlanning, startExecution, resetState, setState };
+  return { 
+    state, 
+    isProcessing, 
+    error, 
+    liveResearchText,
+    livePlanText,
+    liveCodeText,
+    startPlanning, 
+    startExecution, 
+    resetState, 
+    setState 
+  };
 }
