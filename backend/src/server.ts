@@ -11,14 +11,14 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 
-// Armazenamento temporário para o Gate de Aprovação (In-Memory)
+// Temporary Storage for Approval Gate (In-Memory)
 const pendingExecutions = new Map<string, AgentState>();
 
 app.get('/api/health', (req: Request, res: Response) => {
   res.status(200).json({ status: 'ok', message: 'Backend is running.' });
 });
 
-// Rota 1: Iniciar Planejamento (Pesquisador + Planejador)
+// Route 1: Start Planning (Researcher + Planner)
 app.get('/api/stream/plan', async (req: Request, res: Response) => {
   const parsed = UserInputSchema.safeParse({
       documentContext: (req.query.document as string) || '',
@@ -38,7 +38,7 @@ app.get('/api/stream/plan', async (req: Request, res: Response) => {
 
   const abortController = new AbortController();
   req.on('close', () => {
-      console.log('[SSE] Cliente desconectou. Abortando IA...');
+      console.log('[SSE] Client disconnected. Aborting AI...');
       abortController.abort();
       res.end();
   });
@@ -65,11 +65,11 @@ app.get('/api/stream/plan', async (req: Request, res: Response) => {
   }
 });
 
-// Rota 2: Receber o Estado Aprovado e gerar um ID de Sessão
+// Route 2: Receive Approved State and Generate Session ID
 app.post('/api/prepare-execute', (req: Request, res: Response) => {
     const state = req.body as AgentState;
     if (!state) {
-        res.status(400).json({ error: 'Estado não fornecido.' });
+        res.status(400).json({ error: 'State not provided.' });
         return;
     }
     const id = crypto.randomUUID();
@@ -77,17 +77,17 @@ app.post('/api/prepare-execute', (req: Request, res: Response) => {
     res.json({ id });
 });
 
-// Rota 3: Iniciar Execução (Executor + Sandbox via ID)
+// Route 3: Start Execution (Executor + Sandbox via ID)
 app.get('/api/stream/execute/:id', async (req: Request, res: Response) => {
     const id = req.params.id;
     const state = pendingExecutions.get(id);
 
     if (!state) {
-        res.status(404).json({ error: 'Sessão de execução não encontrada ou expirada.' });
+        res.status(404).json({ error: 'Execution session not found or expired.' });
         return;
     }
 
-    pendingExecutions.delete(id); // Consome a sessão
+    pendingExecutions.delete(id); // Consume the session
 
     res.writeHead(200, {
         'Content-Type': 'text/event-stream',
@@ -97,7 +97,7 @@ app.get('/api/stream/execute/:id', async (req: Request, res: Response) => {
 
     const abortController = new AbortController();
     req.on('close', () => {
-        console.log('[SSE] Cliente desconectou. Abortando Execução...');
+        console.log('[SSE] Client disconnected. Aborting Execution...');
         abortController.abort();
         res.end();
     });

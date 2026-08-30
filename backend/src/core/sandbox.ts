@@ -4,25 +4,25 @@ import os from 'os';
 import path from 'path';
 
 export async function runSandboxValidation(code: string): Promise<{ success: boolean; output: string }> {
-    // Cria o caminho de um arquivo temporário único na pasta de temp do sistema operacional
+    // Creates a unique temporary file path in the OS temp directory
     const tempDir = os.tmpdir();
     const tempFileName = `sandbox_agent_${Date.now()}_${Math.floor(Math.random() * 1000)}.ts`;
     const tempFilePath = path.join(tempDir, tempFileName);
 
     try {
-        // Grava o código gerado no arquivo temporário
+        // Writes the generated code to the temporary file
         fs.writeFileSync(tempFilePath, code, 'utf-8');
 
         return await new Promise((resolve) => {
-            // Executa o arquivo TS. Se houver erro de sintaxe, o executor lançará erro.
+            // Executes the TS file. If there is a syntax error, the executor will throw an error.
             exec(`npx tsx ${tempFilePath}`, { timeout: 5000 }, (error, stdout, stderr) => {
                 if (error) {
-                    // Se o erro foi causado pelo timeout (killed = true), significa que o script 
-                    // compilou e começou a rodar (ex: servidor web, readline iterativo), o que é um SUCESSO de sintaxe.
+                    // If the error was caused by a timeout (killed = true), it means the script
+                    // compiled and started running (e.g., web server, interactive readline), which is a syntax SUCCESS.
                     if (error.killed && error.signal === 'SIGTERM') {
                         resolve({
                             success: true,
-                            output: "Sintaxe validada com sucesso (Script em execução contínua / Timeout atingido sem crash inicial).\n" + stdout
+                            output: "Syntax successfully validated (Script in continuous execution / Timeout reached without initial crash).\n" + stdout
                         });
                         return;
                     }
@@ -44,15 +44,15 @@ export async function runSandboxValidation(code: string): Promise<{ success: boo
     } catch (err: any) {
         return {
             success: false,
-            output: `Erro catastrófico na Sandbox: ${err.message}`
+            output: `Catastrophic error in the Sandbox: ${err.message}`
         };
     } finally {
-        // MUITO IMPORTANTE: Garante a deleção do arquivo residual (Reprodutibilidade)
+        // VERY IMPORTANT: Ensures deletion of the residual file (Reproducibility)
         if (fs.existsSync(tempFilePath)) {
             try {
                 fs.unlinkSync(tempFilePath);
             } catch (cleanupError) {
-                console.error("Falha ao limpar arquivo da Sandbox:", cleanupError);
+                console.error("Failed to clean up Sandbox file:", cleanupError);
             }
         }
     }

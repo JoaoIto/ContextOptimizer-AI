@@ -1,66 +1,66 @@
-# ContextOptimizer-AI: Código Fonte (`/project`)
+# ContextOptimizer-AI: Source Code (`/project`)
 
-Bem-vindo ao diretório executável do **ContextOptimizer-AI**! Este projeto é a implementação prática desenvolvida durante o *micro1 Agentic Workflows Hackathon*. 
+Welcome to the executable directory of **ContextOptimizer-AI**! This project is the practical implementation developed during the *micro1 Agentic Workflows Hackathon*. 
 
-Aqui reside a lógica do nosso Orquestrador Multiagente focado em resolver o problema do *"Context Bloat"* e acelerar fluxos de engenharia de software garantindo código de primeira viagem sem alucinações sintáticas ("Zero Hallucination").
-
----
-
-## 🚀 O Problema e Nossa Solução
-
-**A Dor:** Desenvolvedores inserem documentações massivas em LLMs. Devido ao fenômeno de esquecimento espacial no meio do prompt ("Lost in the middle") e à concorrência cognitiva (o modelo tem que entender a arquitetura e acertar a sintaxe ao mesmo tempo), o código gerado frequentemente vem quebrado, alucinado ou desrespeita os guias da documentação.
-
-**A Solução:** Empregamos um framework chamado **TDP (Task-Decoupled Planning)** através de uma cadeia de 3 Agentes isolados:
-1.  **🔍 Pesquisador:** Foca estritamente em podar e comprimir a documentação, descartando ruído e mantendo apenas contratos.
-2.  **🧠 Planejador:** Utiliza o modelo PTCF (Persona, Task, Context, Format) para ditar a arquitetura do código sem escrever sintaxe executável.
-3.  **💻 Executor:** Recebe um plano de ação super afunilado e foca *100% da sua inferência latente* na geração precisa e limpa de código.
-4.  **🛡️ Sandbox:** Um ambiente host executável captura o código. Caso a compilação falhe, engatilha-se um *Loop de Auto-Reparo (Self-Repair)* automático com base no erro logado (`stderr`).
+Here resides the logic of our Multi-Agent Orchestrator focused on solving the *"Context Bloat"* problem and accelerating software engineering workflows, ensuring first-class code without syntactic hallucinations ("Zero Hallucination").
 
 ---
 
-## 🏗️ Estrutura do Monorepo Híbrido
+## 🚀 The Problem and Our Solution
 
-Para garantir a pontuação máxima de *"End to End Quality"*, pivotamos a arquitetura de uma CLI para um servidor com UI em tempo real, através de conexões SSE.
+**The Pain:** Developers insert massive documentation into LLMs. Due to the phenomenon of spatial forgetting in the middle of the prompt ("Lost in the middle") and cognitive competition (the model has to understand the architecture and hit the syntax at the same time), the generated code often comes broken, hallucinated, or disregards the documentation guidelines.
+
+**The Solution:** We employ a framework called **TDP (Task-Decoupled Planning)** through a chain of 3 isolated Agents:
+1.  **🔍 Researcher:** Focuses strictly on pruning and compressing documentation, discarding noise and keeping only contracts.
+2.  **🧠 Planner:** Uses the PTCF (Persona, Task, Context, Format) model to dictate the code architecture without writing executable syntax.
+3.  **💻 Executor:** Receives a super-focused action plan and focuses *100% of its latent inference* on generating precise and clean code.
+4.  **🛡️ Sandbox:** An executable host environment captures the code. If compilation fails, an automatic *Self-Repair Loop* is triggered based on the logged error (`stderr`).
+
+---
+
+## 🏗️ Hybrid Monorepo Structure
+
+To ensure the maximum *"End to End Quality"* score, we pivoted the architecture from a CLI to a server with a real-time UI, through SSE connections.
 
 ```text
 /project
-├── backend/              # Motor Multiagente em Node.js (Express + Zod + GenAI)
-│   ├── src/agents/       # A lógica de extração, arquitetura e geração (Pesquisador, Planejador, Executor)
-│   ├── src/core/         # Contratos estritos Zod e o mecanismo Sandbox (`child_process.exec`)
-│   └── src/server.ts     # Ponto de acesso HTTP streamando as yields da state machine via SSE
-├── frontend/             # Interface visual (React Vite + Tailwind) consumindo SSE (A ser desenvolvido)
-└── package.json          # Orquestrador global 
+├── backend/              # Multi-Agent Engine in Node.js (Express + Zod + GenAI)
+│   ├── src/agents/       # Extraction, architecture, and generation logic (Researcher, Planner, Executor)
+│   ├── src/core/         # Strict Zod contracts and the Sandbox mechanism (`child_process.exec`)
+│   └── src/server.ts     # HTTP access point streaming state machine yields via SSE
+├── frontend/             # Visual interface (React Vite + Tailwind) consuming SSE (To be developed)
+└── package.json          # Global Orchestrator 
 ```
 
 ---
 
-## ⚙️ Como Inicializar (Zero-Fricção)
+## ⚙️ How to Initialize (Zero-Friction)
 
-Atualmente, apenas a API **Backend** está implementada (Fase 3 completa). 
+Currently, only the **Backend** API is implemented (Phase 3 complete). 
 
-**Pré-requisitos:** Node.js (v18+) e uma chave `GEMINI_API_KEY`.
+**Prerequisites:** Node.js (v18+) and a `GEMINI_API_KEY`.
 
 ```bash
-# 1. Entre no diretório do motor
+# 1. Enter the engine directory
 cd backend
 
-# 2. Configure as variáveis de ambiente
-cp .env.example .env
-# > Adicione sua chave: GEMINI_API_KEY=AIza...
+# 2. Configure environment variables
+cp.env.example.env
+# > Add your key: GEMINI_API_KEY=AIza...
 
-# 3. Instale as dependências
+# 3. Install dependencies
 npm install
 
-# 4. Inicie o servidor via tsx
+# 4. Start the server via tsx
 npm run dev
 ```
 
-O servidor começará a escutar na porta `3000`. O endpoint core para streamar o andamento dos agentes é acionado via GET na rota `http://localhost:3000/api/stream?prompt=...&document=...`.
+The server will start listening on port `3000`. The core endpoint for streaming the agents' progress is triggered via GET on the route `http://localhost:3000/api/stream?prompt=...&document=...`.
 
 ---
 
-## 🔗 Links e Recursos Úteis
-*   👉 **[Leia as Teses e Arquitetura no Diretório /spec](../spec/)**
+## 🔗 Links and Useful Resources
+*   👉 **[Read the Theses and Architecture in the /spec Directory](../spec/)**
 
 ---
 
@@ -70,6 +70,6 @@ O servidor começará a escutar na porta `3000`. O endpoint core para streamar o
 During testing, we encountered the aggressive rate limit (429 RESOURCE_EXHAUSTED) of the Gemini 2.5 Flash Free Tier (capped at 20 Requests Per Day). Our architecture mitigates cognitive overload by breaking generation into smaller steps (**Task-Decoupled Planning**), but this fundamentally requires *more* sequential API calls. This architectural trade-off means we hit the rate limits much faster than monolithic single-prompt applications.
 
 **The Circuit Breaker Mitigation:**
-Devido ao rigoroso limite de 20 Requests Per Day no Free Tier do Gemini 2.5 Flash, a equipe implementou um Circuit Breaker. Se a cota esgotar durante a avaliação da banca, o sistema fará fallback elegante para uma Demonstração Simulada, protegendo a estabilidade da UI/UX e evitando crashes fatais de rede.
+Due to the strict 20 Requests Per Day limit on the Free Tier of Gemini 2.5 Flash, the team implemented a Circuit Breaker. If the quota is exhausted during the evaluation, the system will make an elegant fallback to a Simulated Demo, protecting the UI/UX stability and avoiding fatal network crashes.
 To ensure our application's UI/UX can be fully evaluated during the hackathon without getting blocked by Google's quota limits, we implemented a **Circuit Breaker** pattern in the Multi-Agent Orchestrator (`orchestrator.ts`).
 If the LLM backoff fails, the orchestrator gracefully degrades to a "Demo Simulation Mode". Instead of throwing fatal backend errors, it yields mock states and simulated code through Server-Sent Events (SSE). This maintains the state choreography and Framer Motion animations in the React client, allowing judges to evaluate the full frontend flow and architecture even if the API quota is strictly exhausted.

@@ -17,7 +17,7 @@ Perform strict extractive compression under the following rules:
 6. If code snippets are present, output only the operational declarations, types, and raw logic blocks. Remove comments and import lists.
 Never hallucinate. Execute prompt pruning now. Squeeze the provided payload to 10% of its original size.`;
 
-    const userPrompt = `DOCUMENTAÇÃO BRUTA:\n${state.rawDocumentContext || 'Nenhuma documentação fornecida.'}\n\nO que o usuário quer construir:\n${state.rawUserPrompt}`;
+    const userPrompt = `RAW DOCUMENTATION:\n${state.rawDocumentContext || 'No documentation provided.'}\n\nWhat the user wants to build:\n${state.rawUserPrompt}`;
 
     try {
         const stream = await generateUniversalStream(userPrompt, systemPrompt, 'RESEARCHER', onRetry, abortSignal);
@@ -34,7 +34,7 @@ Never hallucinate. Execute prompt pruning now. Squeeze the provided payload to 1
         return {
             ...state,
             compressedContext: rawOutput,
-            extractedSources: ["Conhecimento Interno da IA"],
+            extractedSources: ["AI Internal Knowledge"],
             executionStatus: "RESEARCH_COMPLETED"
         };
     } catch (error: any) {

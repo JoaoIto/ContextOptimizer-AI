@@ -4,7 +4,7 @@ import { runPlanner } from "./agents/planner";
 import { runExecutor } from "./agents/executor";
 import { runSandboxValidation } from "./core/sandbox";
 
-// Helper robusto para rodar agente e fazer yield
+// Robust helper to run agent and yield chunks
 async function* streamAgent(
     agentFn: (state: AgentState, onChunk: (c: string) => void, onRetry?: (msg: string) => void, abortSignal?: AbortSignal) => Promise<AgentState>,
     state: AgentState,
@@ -52,7 +52,7 @@ async function* streamAgent(
     return finalState!;
 }
 
-// Fase 1 e 2: Pesquisa e Planejamento
+// Phase 1 and 2: Research and Planning
 export async function* runPlanningPipeline(initialState: AgentState, abortSignal?: AbortSignal): AsyncGenerator<AgentState, void, unknown> {
     let currentState = AgentStateSchema.parse(initialState);
     yield currentState;
@@ -64,7 +64,7 @@ export async function* runPlanningPipeline(initialState: AgentState, abortSignal
         yield next.value;
     }
     
-    yield currentState; // Manda o RESEARCH_COMPLETED
+    yield currentState; // Sends RESEARCH_COMPLETED
     
 
 
@@ -81,10 +81,10 @@ export async function* runPlanningPipeline(initialState: AgentState, abortSignal
     
 
 
-    yield currentState; // Manda o PLANNING_COMPLETED
+    yield currentState; // Sends PLANNING_COMPLETED
 }
 
-// Fase 3 e 4: Execução e Sandbox
+// Phase 3 and 4: Execution and Sandbox
 export async function* runExecutionPipeline(state: AgentState, abortSignal?: AbortSignal): AsyncGenerator<AgentState, void, unknown> {
     let currentState = AgentStateSchema.parse(state);
     
@@ -105,47 +105,57 @@ export async function* runExecutionPipeline(state: AgentState, abortSignal?: Abo
         
 
 
-        yield currentState; // Manda o CODE_GENERATED
+        yield currentState; // Sends CODE_GENERATED
         
         if (currentState.executionStatus.includes("FAILED")) break;
 
         if (currentState.generatedCode) {
-            // Task 5: Conserto da Sanitização na Sandbox (URGENTE)
-            // Remover marcadores de markdown do código gerado (ex: ```typescript ... ```)
+            // Task 5: Sandbox Sanitization Fix (URGENT)
+            // Remove markdown markers from the generated code (e.g., ```typescript ... ```)
             const sanitizedCode = currentState.generatedCode.replace(/```(?:typescript|ts|javascript|js)?\n([\s\S]*?)```/gi, '$1').trim();
             
             const sandboxResult = await runSandboxValidation(sanitizedCode);
             
-            if (sandboxResult.success) {
-                // Métricas Básicas
-                const rawChars = (currentState.rawDocumentContext?.length || 0) + (currentState.rawUserPrompt?.length || 0);
-                const compressedChars = (currentState.compressedContext?.length || 0) + (currentState.ptcfMetaPrompt?.length || 0);
-                const tokensSavedEstimate = Math.max(0, Math.floor((rawChars - compressedChars) / 4));
+            // Basic Metrics
+            const rawChars = (currentState.rawDocumentContext?.length || 0) + (currentState.rawUserPrompt?.length || 0);
+            const compressedChars = (currentState.compressedContext?.length || 0) + (currentState.ptcfMetaPrompt?.length || 0);
+            const tokensSavedEstimate = Math.max(0, Math.floor((rawChars - compressedChars) / 4));
 
+            if (!sandboxResult.success) {
+                retries--;
+                currentState = {
+                    ...currentState,
+                    executionStatus: "FAILED_COMPILATION",
+                    errorFeedbackLog: sandboxResult.output, // Passes the error log for self-correction
+                    sandboxCompilationPassed: false
+                };
+                yield currentState;
+                
+                if (!success && retries === 0) {
+                    currentState = {
+                        ...currentState,
+                        executionStatus: "VALIDATION_EXCEPTION",
+                        errorFeedbackLog: "Terminal failure: Maximum sandbox compilation retries exceeded."
+                    };
+                    yield currentState;
+                }
+            } else {
+                success = true;
                 currentState = {
                     ...currentState,
                     sandboxCompilationPassed: true,
                     executionStatus: "SUCCESS_VERIFIED",
-                    errorFeedbackLog: undefined,
+                    errorFeedbackLog: "", // Cleans up the log on success
                     metrics: {
                         tokensSaved: tokensSavedEstimate,
                         totalCost: 0,
                         wallClockLatencyMs: 0
                     }
                 };
-                success = true;
-            } else {
-                currentState = {
-                    ...currentState,
-                    sandboxCompilationPassed: false,
-                    executionStatus: "FAILED_COMPILATION",
-                    errorFeedbackLog: sandboxResult.output
-                };
-                retries--;
+                yield currentState;
             }
             
             currentState = AgentStateSchema.parse(currentState);
-            yield currentState;
         } else {
             break;
         }

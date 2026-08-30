@@ -7,28 +7,28 @@ export async function runPlanner(
     onRetry?: (msg: string) => void,
     abortSignal?: AbortSignal
 ): Promise<AgentState> {
-    const systemPrompt = `Você atua no framework PTCF (Persona, Task, Context, Format). 
-REGRAS ABSOLUTAS E INEGOCIÁVEIS:
-1. O código arquitetado DEVE ser projetado estritamente para TypeScript (Node.js). Não proponha bibliotecas de Python, Go ou outras linguagens. O ambiente alvo é estritamente TypeScript.
-2. Todo o sistema planejado deve caber OBRIGATORIAMENTE em um ÚNICO ARQUIVO TypeScript (Standalone Script). NÃO crie estruturas de pastas, não sugira múltiplos arquivos, nem package.json.
-3. Você deve separar sua resposta usando as tags <MESSAGE> e <PLAN>.
-4. OBRIGATÓRIO: Se a solução envolver um servidor web/HTTP, instrua que ele utilize a porta 0 (aleatória) ou \`process.env.PORT || 0\`, para evitar erro EADDRINUSE na sandbox.
-5. OBRIGATÓRIO: NÃO utilize bibliotecas externas (como express, axios, cors, etc). Utilize EXCLUSIVAMENTE os módulos nativos do Node.js (http, https, fs, path, crypto, etc). O script será testado em uma Sandbox limpa sem node_modules.
+    const systemPrompt = `You operate in the PTCF framework (Persona, Task, Context, Format). 
+ABSOLUTE AND NON-NEGOTIABLE RULES:
+1. The architected code MUST be designed strictly for TypeScript (Node.js). Do not propose libraries for Python, Go, or other languages. The target environment is strictly TypeScript.
+2. The entire planned system must fit MANDATORILY in a SINGLE TypeScript FILE (Standalone Script). DO NOT create folder structures, do not suggest multiple files, nor package.json.
+3. You must separate your response using the <MESSAGE> and <PLAN> tags.
+4. MANDATORY: If the solution involves a web/HTTP server, instruct it to use port 0 (random) or \`process.env.PORT || 0\`, to avoid EADDRINUSE error in the sandbox.
+5. MANDATORY: DO NOT use external libraries (like express, axios, cors, etc). Use EXCLUSIVELY native Node.js modules (http, https, fs, path, crypto, etc). The script will be tested in a clean Sandbox without node_modules.
 
-DETALHAMENTO DAS TAGS:
-- Dentro de <MESSAGE>...</MESSAGE>: Escreva uma resposta de IA conversacional e amigável (em Markdown), explicando brevemente o entendimento do problema e convidando o usuário a revisar o plano.
-- Dentro de <PLAN>...</PLAN>: Escreva o plano técnico estruturado OBRIGATORIAMENTE em Markdown avançado (use #, ##, -, **, \`\`\`).
+TAG DETAILS:
+- Inside <MESSAGE>...</MESSAGE>: Write a conversational and friendly AI response (in Markdown), briefly explaining the understanding of the problem and inviting the user to review the plan.
+- Inside <PLAN>...</PLAN>: Write the structured technical plan MANDATORILY in advanced Markdown (use #, ##, -, **, \`\`\`).
 
-Exemplo de formato:
+Example format:
 <MESSAGE>
-Olá! Analisei seu pedido para construir um **Orquestrador de Projetos**. O contexto principal envolve o ecossistema TypeScript e Node.js...
+Hello! I analyzed your request to build a **Project Orchestrator**. The main context involves the TypeScript and Node.js ecosystem...
 </MESSAGE>
 <PLAN>
 # Persona
 ...
 </PLAN>`;
 
-    const userPrompt = `OBJETIVO DO DESENVOLVEDOR:\n${state.rawUserPrompt}\n\nCONTEXTO COMPRIMIDO (REGRAS):\n${state.compressedContext}`;
+    const userPrompt = `DEVELOPER GOAL:\n${state.rawUserPrompt}\n\nCOMPRESSED CONTEXT (RULES):\n${state.compressedContext}`;
 
     try {
         const stream = await generateUniversalStream(userPrompt, systemPrompt, 'PLANNER', onRetry, abortSignal);
@@ -45,7 +45,7 @@ Olá! Analisei seu pedido para construir um **Orquestrador de Projetos**. O cont
         const messageMatch = rawOutput.match(/<MESSAGE>([\s\S]*?)<\/MESSAGE>/i);
         const planMatch = rawOutput.match(/<PLAN>([\s\S]*?)<\/PLAN>/i);
 
-        const plannerMessage = messageMatch ? messageMatch[1].trim() : "Plano gerado com sucesso. Revise os detalhes abaixo.";
+        const plannerMessage = messageMatch ? messageMatch[1].trim() : "Plan successfully generated. Review the details below.";
         const ptcfMetaPrompt = planMatch ? planMatch[1].trim() : rawOutput;
         
         return {

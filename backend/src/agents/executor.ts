@@ -7,18 +7,18 @@ export async function runExecutor(
     onRetry?: (msg: string) => void,
     abortSignal?: AbortSignal
 ): Promise<AgentState> {
-    const systemPrompt = `Você é um Engenheiro de Software Sênior especialista em Node.js e TypeScript.
-Sua única função é escrever o código final e funcional baseado no plano aprovado.
-- Você deve emitir o script completo em um único arquivo, com imports, lógicas e exports necessários.
-- Não crie placeholders ou comentários "adicione aqui". Escreva a implementação real.
-- OBRIGATÓRIO: Se você for instanciar um servidor HTTP, OBRIGATORIAMENTE defina a porta como 0 (ex: server.listen(0)) ou process.env.PORT || 0 para evitar erros EADDRINUSE durante a compilação no Sandbox.
-- OBRIGATÓRIO: NÃO utilize bibliotecas externas (como express, axios, cors, etc). Utilize EXCLUSIVAMENTE os módulos nativos do Node.js (http, fs, etc). O script será testado em uma Sandbox limpa sem node_modules.
-- OBRIGATÓRIO: O código final deve estar encapsulado dentro de tags <CODE> e </CODE>. Não retorne Markdown como \`\`\`typescript, APENAS as tags <CODE>.`;
+    const systemPrompt = `You are a Senior Software Engineer specializing in Node.js and TypeScript.
+Your sole function is to write the final and functional code based on the approved plan.
+- You must output the complete script in a single file, with the necessary imports, logic, and exports.
+- Do not create placeholders or "add here" comments. Write the actual implementation.
+- MANDATORY: If you are going to instantiate an HTTP server, you MUST set the port to 0 (e.g., server.listen(0)) or process.env.PORT || 0 to avoid EADDRINUSE errors during compilation in the Sandbox.
+- MANDATORY: DO NOT use external libraries (like express, axios, cors, etc). Use EXCLUSIVELY native Node.js modules (http, fs, etc). The script will be tested in a clean Sandbox without node_modules.
+- MANDATORY: The final code must be encapsulated inside <CODE> and </CODE> tags. Do not return Markdown like \`\`\`typescript, ONLY the <CODE> tags.`;
 
-    const userPrompt = `META PROMPT PTCF:
+    const userPrompt = `PTCF META PROMPT:
 ${state.ptcfMetaPrompt}
 
-${state.errorFeedbackLog ? `\nATENÇÃO! O CÓDIGO ANTERIOR FALHOU NA COMPILAÇÃO. AQUI ESTÁ O ERRO DO TERMINAL:\n${state.errorFeedbackLog}\nCORRIJA O CÓDIGO E EMITA APENAS O NOVO CÓDIGO CRU DENTRO DA TAG <CODE>.` : ''}`;
+${state.errorFeedbackLog ? `\nATTENTION! THE PREVIOUS CODE FAILED COMPILATION. HERE IS THE TERMINAL ERROR:\n${state.errorFeedbackLog}\nFIX THE CODE AND OUTPUT ONLY THE NEW RAW CODE INSIDE THE <CODE> TAG.` : ''}`;
 
     try {
         const stream = await generateUniversalStream(userPrompt, systemPrompt, 'EXECUTOR', onRetry, abortSignal);
@@ -35,10 +35,10 @@ ${state.errorFeedbackLog ? `\nATENÇÃO! O CÓDIGO ANTERIOR FALHOU NA COMPILAÇ�
         const messageMatch = rawOutput.match(/<MESSAGE>([\s\S]*?)<\/MESSAGE>/i);
         const codeMatch = rawOutput.match(/<CODE>([\s\S]*?)<\/CODE>/i);
 
-        const executorMessage = messageMatch ? messageMatch[1].trim() : "Código gerado com sucesso.";
+        const executorMessage = messageMatch ? messageMatch[1].trim() : "Code generated successfully.";
         let sanitizedCode = codeMatch ? codeMatch[1].trim() : rawOutput.trim();
 
-        // Caso ele ainda coloque markdown dentro da tag <CODE>
+        // In case it still outputs markdown inside the <CODE> tag
         const markdownRegex = /```(?:typescript|ts|javascript|js|json)?\s*([\s\S]*?)```/i;
         const match = sanitizedCode.match(markdownRegex);
         if (match && match[1]) {

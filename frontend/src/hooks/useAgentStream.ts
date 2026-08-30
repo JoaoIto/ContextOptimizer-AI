@@ -47,7 +47,7 @@ export function useAgentStream() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Estados de Streaming Ao Vivo
+  // Live Streaming States
   const [liveResearchText, setLiveResearchText] = useState("");
   const [livePlanText, setLivePlanText] = useState("");
   const [liveCodeText, setLiveCodeText] = useState("");
@@ -70,7 +70,7 @@ export function useAgentStream() {
 
         setState(data as AgentState);
 
-        // Concatena os chunks ao vivo
+        // Concat live chunks
         if (data.executionStatus === "RESEARCH_STREAMING" && data.streamingResearchChunk) {
             setLiveResearchText((prev) => prev + data.streamingResearchChunk);
         }
@@ -93,13 +93,13 @@ export function useAgentStream() {
           eventSource.close();
         }
       } catch (err) {
-        console.error("Erro ao parsear dados do SSE:", err);
+        console.error("Error parsing SSE data:", err);
       }
     };
 
     eventSource.onerror = (err) => {
-      console.error("Erro no EventSource:", err);
-      setError("Conexão com o servidor perdida.");
+      console.error("Error in EventSource:", err);
+      setError("Connection to server lost.");
       setIsProcessing(false);
       eventSource.close();
     };
@@ -125,13 +125,13 @@ export function useAgentStream() {
             body: JSON.stringify(currentState)
         });
         
-        if (!res.ok) throw new Error("Falha ao preparar execução.");
+        if (!res.ok) throw new Error("Failed to prepare execution.");
         
         const { id } = await res.json();
         startEventStream(`${apiUrl}/api/stream/execute/${id}`);
     } catch (err: any) {
         if (err.name !== 'AbortError') {
-            setError('Conexão perdida. Tentando restabelecer link seguro...');
+            setError('Connection lost. Trying to re-establish secure link...');
             setIsProcessing(false);
         }
     }

@@ -98,25 +98,17 @@ export async function* generateUniversalStream(
                     systemInstruction: systemInstruction,
                     temperature: 0.1,
                 }
-            }); // O SDK atual do GoogleGenAI pode não aceitar abortSignal diretamente no generateContentStream, mas se abortado, o gerador de eventos fecha a requisição.
+            });
             for await (const chunk of stream) {
                 if (chunk.text) yield { text: chunk.text };
             }
             return;
         } catch (error: any) {
-            const isHardQuota = error.message?.includes('429') || error.message?.includes('limit: 20') || error.message?.includes('QUOTA') || error.message?.includes('403');
-            if (isHardQuota || error.status === 429) {
-                console.error(`[🔥] LLM Generation Quota Exceeded for Gemini. Disparando Fallback imediato para Qwen via universalClient.`, error.message);
-                if (onRetry) onRetry("Fallback de provedor ativado (Cota Google excedida).");
-                useFallback = true;
-            } else {
-                throw error;
-            }
-        }
-
-        if (useFallback) {
-            let attempt = 0;
-            while (attempt <= maxRetries) {
+            const isQuotaError = error.message?.includes('429') || error.message?.includes('Quota') || error.message?.includes('quota');
+            
+            if (isQuotaError && attempt < maxRetries) {
+                console.warn(`[🔥] LLM Generation Quota Exceeded for ${provider}. Triggering Fallback immediately to Qwen via universalClient.`, JSON.stringify(error));
+                
                 try {
                     const stream = await universalClient.chat.completions.create({
                         model: 'meta-llama/llama-3.3-70b-instruct',
@@ -131,17 +123,20 @@ export async function* generateUniversalStream(
                         const content = chunk.choices[0]?.delta?.content || '';
                         if (content) yield { text: content };
                     }
-                    return; // Sucesso, sai do loop
-                } catch (error: any) {
-                    console.error(`[🔥] ERROR IN EXECUTOR FALLBACK (Tentativa ${attempt + 1}/${maxRetries + 1}):`, error.message);
-                    if (attempt < maxRetries) {
-                        attempt++;
-                        if (onRetry) onRetry(`Retentando Qwen Fallback (Tentativa ${attempt}/${maxRetries})...`);
-                        await delay(3000 * attempt);
-                    } else {
-                        throw error;
-                    }
+                    return; 
+                } catch (fallbackError: any) {
+                    console.error("[CRITICAL] Fallback also failed.", fallbackError);
+                    if (onRetry) onRetry(`Fallback failed: ${fallbackError.message}`);
+                    throw new Error(`QUOTA_EXCEEDED_AND_FALLBACK_FAILED: ${fallbackError.message}`);
                 }
+            }
+
+            console.error(`Error generating stream with ${provider}:`, error);
+            if (attempt < maxRetries) {
+                if (onRetry) onRetry(`Error on attempt ${attempt}. Retrying... (${error.message})`);
+                await delay(2000 * attempt);
+            } else {
+                throw error;
             }
         }
     } else {
