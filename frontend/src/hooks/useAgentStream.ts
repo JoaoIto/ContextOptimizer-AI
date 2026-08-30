@@ -109,14 +109,16 @@ export function useAgentStream() {
     setLiveResearchText("");
     setLivePlanText("");
     setLiveCodeText("");
-    const url = `http://localhost:3000/api/stream/plan?prompt=${encodeURIComponent(prompt)}&document=${encodeURIComponent(documentContext)}`;
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+    const url = `${apiUrl}/api/stream/plan?prompt=${encodeURIComponent(prompt)}&document=${encodeURIComponent(documentContext)}`;
     startEventStream(url);
   }, []);
 
   const startExecution = useCallback(async (currentState: AgentState) => {
     try {
         setIsProcessing(true);
-        const res = await fetch('http://localhost:3000/api/prepare-execute', {
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+        const res = await fetch(`${apiUrl}/api/prepare-execute`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(currentState)
@@ -125,7 +127,7 @@ export function useAgentStream() {
         if (!res.ok) throw new Error("Falha ao preparar execução.");
         
         const { id } = await res.json();
-        startEventStream(`http://localhost:3000/api/stream/execute/${id}`);
+        startEventStream(`${apiUrl}/api/stream/execute/${id}`);
     } catch (err: any) {
         setError(err.message);
         setIsProcessing(false);
