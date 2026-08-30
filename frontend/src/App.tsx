@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAgentStream } from './hooks/useAgentStream';
-import { Paperclip, ArrowUp, Check, Loader2, Sparkles, X, FileText, Code2, BookOpen, Download, AlertTriangle, Settings, BrainCircuit, CheckCircle, Copy, Cpu, Network } from 'lucide-react';
+import { Paperclip, ArrowUp, Check, Loader2, Sparkles, X, FileText, Code2, BookOpen, Download, AlertTriangle, Settings, Copy, Cpu, Network } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
